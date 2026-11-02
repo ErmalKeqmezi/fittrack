@@ -1,4 +1,4 @@
-import { BookOpen, LayoutDashboard, Settings, type LucideIcon } from "lucide-react";
+import { BookOpen, ClipboardList, LayoutDashboard, Settings, type LucideIcon } from "lucide-react";
 
 import { routes } from "./routes";
 
@@ -14,6 +14,7 @@ export type NavItem = {
  */
 export const primaryNav: NavItem[] = [
   { href: routes.dashboard, label: "Dashboard", icon: LayoutDashboard },
+  { href: routes.plans, label: "Plans", icon: ClipboardList },
   { href: routes.exercises, label: "Exercises", icon: BookOpen },
 ];
 

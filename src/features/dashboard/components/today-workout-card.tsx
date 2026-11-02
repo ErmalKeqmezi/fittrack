@@ -1,6 +1,8 @@
 import { BedDouble, CalendarClock, CalendarDays, CheckCircle2, ClipboardList } from "lucide-react";
+import Link from "next/link";
 
 import { EmptyState, Panel, PanelHeader } from "@/components/panel";
+import { routes } from "@/config/routes";
 import { formatDateKey } from "@/lib/dates";
 
 import type { TodaySchedule } from "../today";
@@ -31,7 +33,10 @@ export function TodayWorkoutCard({ schedule, today }: { schedule: TodaySchedule;
 
       {schedule.kind === "no-plan" ? (
         <EmptyState icon={ClipboardList} title="No active plan">
-          When you activate a workout plan, the session scheduled for today appears here.
+          When you activate a workout plan, the session scheduled for today appears here.{" "}
+          <Link href={routes.plans} className="font-medium text-primary hover:underline">
+            Choose a plan
+          </Link>
         </EmptyState>
       ) : schedule.kind === "rest" ? (
         <EmptyState icon={BedDouble} title={`${schedule.day.name}: rest day`}>

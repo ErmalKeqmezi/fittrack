@@ -3,7 +3,7 @@
 A private, single-user gym journal: log workouts, track strength progression and personal records.
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui and Supabase.
 
-> **Status:** Phase 3 complete: exercise library.
+> **Status:** Phase 4 complete: workout planner.
 
 ## Requirements
 
@@ -96,6 +96,9 @@ Migrations live in `supabase/migrations/`:
    `session_summaries` and `exercise_session_bests` (`security_invoker`, so RLS applies)
 5. `…_custom_exercises.sql`: `save_custom_exercise()` (atomic create/update with secondary
    muscles; custom names may not shadow built-ins) and three forearm exercises
+6. `…_planner.sql`: one weekday per day per plan, and atomic planner functions
+   (`create_workout_plan`, `set_active_plan`, `add/update/move_workout_day`,
+   `add/move_plan_exercise`) with limits of 14 days per plan and 20 exercises per day
 
 ```
 auth.users ─1:1─ profiles
@@ -114,6 +117,16 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   Exercises used in a plan or logged workout cannot be deleted (foreign keys), only archived.
 - Search matches every word against name, muscles and equipment; results rank name matches first.
   Filters (muscle region, equipment, type, source, archived) are kept in the URL.
+
+## Workout planner
+
+- Plans contain ordered days. A day can be assigned a weekday (one day per weekday) or stay
+  unscheduled, and can be a rest day (no exercises).
+- Each planned exercise has target sets, a rep range, optional rest time and notes.
+- One plan can be active; its day for today's weekday appears on the dashboard. Plans are optional.
+- Templates (Push/Pull/Legs, Upper/Lower, Arnold Split, Full Body) are copied into a normal,
+  editable plan. A unit test checks every template exercise exists in the built-in library.
+- Deleting a plan or day never deletes logged workouts; sessions keep their own name snapshot.
 
 ## How statistics are calculated
 
@@ -145,7 +158,7 @@ src/
   components/layout/   sidebar (desktop), header + bottom nav (mobile), page header
   components/charts/   shared chart theme and tooltip
   features/<domain>/   business logic per domain: actions.ts, queries.ts, schemas.ts, components/
-                       (auth, dashboard, analytics, profile, exercises)
+                       (auth, dashboard, analytics, profile, exercises, planner)
   hooks/               client hooks (useFormAction: forms that keep values on errors)
   lib/                 supabase clients, env validation, utilities
   config/              route constants and navigation
@@ -156,14 +169,14 @@ supabase/
   tests/               database security tests
 ```
 
-Upcoming phases add `features/{planner,workouts}`. Each phase adds its pages to `src/config/navigation.ts`.
+Upcoming phases add `features/workouts`. Each phase adds its pages to `src/config/navigation.ts`.
 
 ## Roadmap
 
 1. ✅ Setup, database, authentication, security
 2. ✅ Responsive UI shell and dashboard
 3. ✅ Exercise library
-4. Workout planner
+4. ✅ Workout planner
 5. Workout tracking and sessions
 6. Progress analytics and personal records
 7. PWA, testing, deployment

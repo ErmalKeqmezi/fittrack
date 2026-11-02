@@ -5,17 +5,7 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmAction } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes";
 
@@ -52,28 +42,17 @@ export function ExerciseOwnerActions({ exerciseId, name, isArchived }: { exercis
         {isArchived ? <ArchiveRestore aria-hidden /> : <Archive aria-hidden />}
         {isArchived ? "Restore" : "Archive"}
       </Button>
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
+      <ConfirmAction
+        title={`Delete “${name}”?`}
+        description="This permanently removes the exercise. Exercises used in plans or logged workouts cannot be deleted. Archive them to hide them instead."
+        confirmLabel="Delete exercise"
+        onConfirm={remove}
+        trigger={
           <Button variant="destructive" className="h-11 rounded-xl px-4" disabled={pending}>
             <Trash2 aria-hidden /> Delete
           </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{name}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes the exercise. Exercises used in plans or logged workouts cannot be
-              deleted. Archive them to hide them instead.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={remove}>
-              Delete exercise
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        }
+      />
     </div>
   );
 }

@@ -100,5 +100,34 @@ check("anon cannot call save_custom_exercise", !!r.error, r.error?.code);
 r = await owner.from("exercises").delete().eq("id", builtin.id).select();
 check("owner cannot delete built-in exercise", !!r.error || r.data.length === 0);
 
+// Planner functions
+r = await owner.rpc("create_workout_plan", { p_name: "RPC plan", p_days: [
+  { name: "A", weekday: 1, exercises: [{ exercise_id: builtin.id, target_sets: 3, target_reps_min: 8, target_reps_max: 10 }] },
+  { name: "B", weekday: 2, is_rest_day: true, exercises: [{ exercise_id: builtin.id, target_sets: 3, target_reps_min: 8, target_reps_max: 10 }] },
+] });
+check("create_workout_plan creates plan atomically", !r.error && typeof r.data === "string", r.error?.message);
+const rpcPlan = r.data;
+r = await owner.from("workout_days").select("id, name, weekday, plan_exercises(id)").eq("plan_id", rpcPlan).order("position");
+check("rest day from payload has no exercises", r.data?.[1]?.plan_exercises.length === 0 && r.data?.[0]?.plan_exercises.length === 1);
+const dayB = r.data[1];
+r = await owner.rpc("create_workout_plan", { p_name: "Bad", p_days: [{ name: "X", exercises: [{ exercise_id: builtin.id, target_sets: 3, target_reps_min: 10, target_reps_max: 8 }] }] });
+check("create_workout_plan rolls back on invalid exercise", !!r.error);
+r = await owner.from("workout_plans").select("id").eq("name", "Bad");
+check("no partial plan left behind", r.data?.length === 0);
+r = await owner.rpc("add_plan_exercise", { p_day_id: dayB.id, p_exercise_id: builtin.id, p_target_sets: 3, p_target_reps_min: 8, p_target_reps_max: 10 });
+check("rest day rejects exercises", r.error?.code === "22023", r.error?.code);
+r = await owner.rpc("update_workout_day", { p_day_id: dayB.id, p_name: "B", p_weekday: 1, p_is_rest_day: false });
+r = await owner.from("workout_days").select("name, weekday").eq("plan_id", rpcPlan).order("position");
+check("weekday moves between days", r.data?.[0].weekday === null && r.data?.[1].weekday === 1, JSON.stringify(r.data));
+r = await owner.rpc("move_workout_day", { p_day_id: dayB.id, p_offset: -1 });
+r = await owner.from("workout_days").select("name").eq("plan_id", rpcPlan).order("position");
+check("move_workout_day swaps positions", r.data?.map((d) => d.name).join() === "B,A", JSON.stringify(r.data));
+r = await owner.rpc("set_active_plan", { p_plan_id: rpcPlan, p_active: true });
+r = await owner.rpc("set_active_plan", { p_plan_id: plan.id, p_active: true });
+r = await owner.from("workout_plans").select("id").eq("is_active", true);
+check("only one active plan", r.data?.length === 1 && r.data[0].id === plan.id, JSON.stringify(r.data));
+r = await anon.rpc("create_workout_plan", { p_name: "Anon" });
+check("anon cannot create plans", !!r.error, r.error?.code);
+
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

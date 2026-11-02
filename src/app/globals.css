@@ -106,6 +106,14 @@
   html {
     -webkit-tap-highlight-color: transparent;
   }
+  /* Grids without explicit columns get one shrinkable column, so long
+     truncated rows can never push a stack wider than the screen.
+     grid-cols-* utilities (utilities layer) still override this.
+     An attribute selector is used because Tailwind drops base rules that
+     target a utility class name directly. */
+  :where([class~="grid"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
   body {
     min-height: 100dvh;
   }

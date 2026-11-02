@@ -337,7 +337,16 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "estimate_1rm":
+            "add_plan_exercise":
+{ Args: { "p_day_id": string,"p_exercise_id": string,"p_notes"?: string,"p_rest_seconds"?: number,"p_target_reps_max": number,"p_target_reps_min": number,"p_target_sets": number }; Returns: string
+                           },
+"add_workout_day":
+{ Args: { "p_is_rest_day"?: boolean,"p_name": string,"p_plan_id": string,"p_weekday"?: number }; Returns: string
+                           },
+"create_workout_plan":
+{ Args: { "p_days"?: Json,"p_description"?: string,"p_name": string,"p_template_key"?: string }; Returns: string
+                           },
+"estimate_1rm":
 { Args: { "reps": number,"weight_kg": number }; Returns: number
                            },
 "is_setup_complete":
@@ -346,8 +355,20 @@ isOneToOne: false
 "is_valid_timezone":
 { Args: { "tz": string }; Returns: boolean
                            },
+"move_plan_exercise":
+{ Args: { "p_offset": number,"p_plan_exercise_id": string }; Returns: undefined
+                           },
+"move_workout_day":
+{ Args: { "p_day_id": string,"p_offset": number }; Returns: undefined
+                           },
 "save_custom_exercise":
 { Args: { "p_category": string,"p_description": string,"p_equipment": string,"p_exercise_id"?: string,"p_name": string,"p_primary_muscle_group_id": number,"p_secondary_muscle_group_ids": (number)[] }; Returns: string
+                           },
+"set_active_plan":
+{ Args: { "p_active": boolean,"p_plan_id": string }; Returns: undefined
+                           },
+"update_workout_day":
+{ Args: { "p_day_id": string,"p_is_rest_day": boolean,"p_name": string,"p_notes"?: string,"p_weekday": number }; Returns: undefined
                            }
           }
           Enums: {
