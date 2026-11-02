@@ -6,6 +6,7 @@ import { routes } from "@/config/routes";
 import { env } from "@/lib/env";
 import { toFieldErrors, type FormState } from "@/lib/form-state";
 import { safeNextPath } from "@/lib/safe-redirect";
+import { isValidTimeZone } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
 import { isSetupComplete } from "./queries";
@@ -63,7 +64,7 @@ export async function setupAccount(_prev: SetupState, formData: FormData): Promi
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { display_name: parsed.data.displayName },
+      data: { display_name: parsed.data.displayName, timezone: browserTimeZone(formData) },
       emailRedirectTo: `${env.NEXT_PUBLIC_SITE_URL}${routes.authConfirm}?next=${routes.dashboard}`,
     },
   });
@@ -85,6 +86,11 @@ export async function setupAccount(_prev: SetupState, formData: FormData): Promi
   }
 
   redirect(routes.dashboard);
+}
+
+function browserTimeZone(formData: FormData) {
+  const value = formData.get("timezone");
+  return typeof value === "string" && isValidTimeZone(value) ? value : "UTC";
 }
 
 export async function signOut() {

@@ -4,6 +4,7 @@ export const routes = {
   setup: "/setup",
   authConfirm: "/auth/confirm",
   dashboard: "/dashboard",
+  settings: "/settings",
 } as const;
 
 /** Paths that are reachable without a session. Everything else is private. */

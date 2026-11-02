@@ -13,12 +13,18 @@ const initialState: SetupState = { status: "idle" };
 export function SetupForm() {
   const [state, formAction] = useActionState(setupAccount, initialState);
 
+  // Capture the device timezone so days and weeks match the user's local calendar.
+  function submit(formData: FormData) {
+    formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
+    formAction(formData);
+  }
+
   if (state.status === "success" && state.needsEmailConfirmation) {
     return <FormMessage tone="success">{state.message}</FormMessage>;
   }
 
   return (
-    <form action={formAction} className="grid gap-4" noValidate>
+    <form action={submit} className="grid gap-4" noValidate>
       {state.message ? <FormMessage tone="error">{state.message}</FormMessage> : null}
       <FormField
         name="displayName"

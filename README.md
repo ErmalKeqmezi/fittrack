@@ -3,11 +3,11 @@
 A private, single-user gym journal: log workouts, track strength progression and personal records.
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui and Supabase.
 
-> **Status:** Phase 1 complete: project setup, database, authentication and security.
+> **Status:** Phase 2 complete: responsive app shell and dashboard.
 
 ## Requirements
 
-- **Node.js 20.9 or newer** (22 LTS recommended; see `.nvmrc`). Next.js 16 does not run on Node 19.
+- **Node.js 22.12 or newer** (see `.nvmrc`). Next.js 16 and Vitest do not run on Node 19.
 - **Docker Desktop**, for the local Supabase stack.
 - A Supabase project, for the hosted deployment.
 
@@ -31,6 +31,7 @@ Create your owner account there. Once it exists, registration closes for good.
 | `npm run build` / `npm start` | Production build / serve |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Generate route types and run `tsc` |
+| `npm test` | Unit tests (Vitest) for statistics, dates and schedule logic |
 | `npm run db:start` / `db:stop` | Start / stop local Supabase |
 | `npm run db:reset` | Recreate the local DB from migrations (**deletes local data**) |
 | `npm run db:types` | Regenerate `src/types/database.ts` from the local schema |
@@ -88,6 +89,8 @@ Migrations live in `supabase/migrations/`:
 1. `…_core_schema.sql`: tables, constraints, indexes, `updated_at` triggers
 2. `…_auth_and_security.sql`: single-account guard, profile trigger, privileges, RLS policies
 3. `…_reference_data.sql`: muscle groups and the built-in exercise library (67 exercises)
+4. `…_dashboard_support.sql`: profile timezone, `estimate_1rm()`, and the read-only views
+   `session_summaries` and `exercise_session_bests` (`security_invoker`, so RLS applies)
 
 ```
 auth.users ─1:1─ profiles
@@ -97,6 +100,18 @@ profiles ─1:N─ workout_sessions ─1:N─ session_exercises ─1:N─ exerci
                      │ plan_id / workout_day_id: ON DELETE SET NULL (history survives plan edits)
 profiles ─1:N─ personal_records (unique per exercise + record type) ─→ exercise_sets / workout_sessions
 ```
+
+## How statistics are calculated
+
+All dashboard figures come from recorded sets. Nothing is estimated unless labelled.
+
+- **Volume** = Σ weight × reps over completed, non-warm-up sets of completed workouts.
+- **Weeks** are ISO weeks (Monday–Sunday) in the timezone set in Settings (detected at setup).
+- **Estimated 1RM** uses the Epley formula `w × (1 + reps / 30)`, only for sets of 1–12 reps.
+  It is always shown separately from actual top sets (weight × reps).
+- **Progression highlights** compare an exercise's latest session with the session before it.
+  Exercises with a single session are not compared.
+- **Today's workout** is the day of the active plan whose weekday matches today.
 
 `session_exercises.exercise_name` and `workout_sessions.name` are snapshots, so history stays intact when
 plans or exercises are renamed or deleted.
@@ -113,9 +128,12 @@ src/
     ui/                shadcn/ui primitives
     forms/             form building blocks
     brand/             logo
+  components/layout/   sidebar (desktop), header + bottom nav (mobile), page header
+  components/charts/   shared chart theme and tooltip
   features/<domain>/   business logic per domain: actions.ts, queries.ts, schemas.ts, components/
+                       (auth, dashboard, analytics, profile)
   lib/                 supabase clients, env validation, utilities
-  config/              route constants
+  config/              route constants and navigation
   types/               generated database types
   proxy.ts             session refresh + route protection
 supabase/
@@ -123,12 +141,12 @@ supabase/
   tests/               database security tests
 ```
 
-Upcoming phases add `features/{exercises,planner,workouts,analytics}`, `components/charts` and `hooks/`.
+Upcoming phases add `features/{exercises,planner,workouts}` and `hooks/`. Each phase adds its pages to `src/config/navigation.ts`.
 
 ## Roadmap
 
 1. ✅ Setup, database, authentication, security
-2. Responsive UI shell and dashboard
+2. ✅ Responsive UI shell and dashboard
 3. Exercise library
 4. Workout planner
 5. Workout tracking and sessions

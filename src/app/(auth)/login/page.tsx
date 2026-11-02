@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { routes } from "@/config/routes";
 import { AuthCard } from "@/features/auth/components/auth-card";
 import { LoginForm } from "@/features/auth/components/login-form";
-import { isSetupComplete } from "@/features/auth/queries";
+import { getCurrentUser, isSetupComplete } from "@/features/auth/queries";
 import { safeNextPath } from "@/lib/safe-redirect";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -15,6 +16,7 @@ const notices: Record<string, string> = {
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
+  if (await getCurrentUser()) redirect(safeNextPath(params.next));
   const setupComplete = await isSetupComplete();
   const next = typeof params.next === "string" ? safeNextPath(params.next) : undefined;
   const notice = typeof params.error === "string" ? notices[params.error] : undefined;

@@ -11,10 +11,16 @@ import { cn } from "@/lib/utils";
 export function SubmitButton({
   children,
   pendingLabel,
+  pending: pendingOverride,
   className,
   ...props
-}: ComponentProps<typeof Button> & { pendingLabel?: string }) {
-  const { pending } = useFormStatus();
+}: ComponentProps<typeof Button> & {
+  pendingLabel?: string;
+  /** For forms submitted via onSubmit, where useFormStatus does not apply. */
+  pending?: boolean;
+}) {
+  const formStatus = useFormStatus();
+  const pending = pendingOverride ?? formStatus.pending;
 
   return (
     <Button

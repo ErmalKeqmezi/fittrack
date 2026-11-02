@@ -45,9 +45,8 @@ export async function updateSession(request: NextRequest) {
     return redirectPreservingCookies(request, response, routes.login, pathname);
   }
 
-  if (isSignedIn && (pathname === routes.login || pathname === routes.setup)) {
-    return redirectPreservingCookies(request, response, routes.dashboard);
-  }
+  // Signed-in visitors on /login or /setup are redirected by those pages, which
+  // also verify the account still exists (avoids loops with a stale token).
 
   return response;
 }

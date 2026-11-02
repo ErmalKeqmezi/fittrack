@@ -10,6 +10,7 @@ export type CurrentUser = {
   id: string;
   email: string;
   displayName: string | null;
+  timeZone: string;
   memberSince: string;
 };
 
@@ -25,15 +26,19 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, created_at")
+    .select("display_name, timezone, created_at")
     .eq("id", userId)
     .maybeSingle();
+
+  // A valid token for an account that no longer exists is treated as signed out.
+  if (!profile) return null;
 
   return {
     id: userId,
     email: typeof data.claims.email === "string" ? data.claims.email : "",
-    displayName: profile?.display_name ?? null,
-    memberSince: profile?.created_at ?? new Date().toISOString(),
+    displayName: profile.display_name,
+    timeZone: profile.timezone,
+    memberSince: profile.created_at,
   };
 });
 

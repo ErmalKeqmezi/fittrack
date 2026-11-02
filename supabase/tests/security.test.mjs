@@ -74,5 +74,16 @@ check("finish session", !r.error, r.error?.message);
 
 r = await anon.from("workout_sessions").select("id");
 check("anon cannot read sessions", !!r.error || r.data.length === 0, r.error?.code);
+r = await owner.from("session_summaries").select("volume_kg, working_set_count").eq("id", s.id).single();
+check("session summary aggregates sets", Number(r.data?.volume_kg) === 1330 && r.data?.working_set_count === 2, JSON.stringify(r.data));
+r = await owner.from("exercise_session_bests").select("top_weight_kg, best_e1rm_kg").eq("session_id", s.id).single();
+check("exercise bests computes est. 1RM", Number(r.data?.best_e1rm_kg) === 93.33, JSON.stringify(r.data));
+r = await anon.from("session_summaries").select("id");
+check("anon cannot read session_summaries", !!r.error || r.data.length === 0, r.error?.code);
+r = await anon.from("exercise_session_bests").select("session_id");
+check("anon cannot read exercise_session_bests", !!r.error || r.data.length === 0, r.error?.code);
+r = await owner.from("profiles").update({ timezone: "Mars/Olympus" }).eq("id", uid);
+check("invalid timezone rejected", r.error?.code === "23514", r.error?.code);
+
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

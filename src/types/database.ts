@@ -47,6 +47,12 @@ isOneToOne: false
       foreignKeyName: "exercise_sets_session_exercise_id_user_id_fkey"
       columns: ["session_exercise_id","user_id"]
 isOneToOne: false
+      referencedRelation: "exercise_session_bests"
+      referencedColumns: ["session_exercise_id","user_id"]
+    },{
+      foreignKeyName: "exercise_sets_session_exercise_id_user_id_fkey"
+      columns: ["session_exercise_id","user_id"]
+isOneToOne: false
       referencedRelation: "session_exercises"
       referencedColumns: ["id","user_id"]
     }
@@ -119,6 +125,18 @@ isOneToOne: false
       foreignKeyName: "personal_records_session_id_fkey"
       columns: ["session_id"]
 isOneToOne: false
+      referencedRelation: "exercise_session_bests"
+      referencedColumns: ["session_id"]
+    },{
+      foreignKeyName: "personal_records_session_id_fkey"
+      columns: ["session_id"]
+isOneToOne: false
+      referencedRelation: "session_summaries"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "personal_records_session_id_fkey"
+      columns: ["session_id"]
+isOneToOne: false
       referencedRelation: "workout_sessions"
       referencedColumns: ["id"]
     },{
@@ -157,14 +175,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"display_name": string | null,"id": string,"updated_at": string,"weight_unit": string
+                    "created_at": string,"display_name": string | null,"id": string,"timezone": string,"updated_at": string,"weight_unit": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"display_name"?: string | null,"id": string,"updated_at"?: string,"weight_unit"?: string
+                    "created_at"?: string,"display_name"?: string | null,"id": string,"timezone"?: string,"updated_at"?: string,"weight_unit"?: string
                   }
                   Update: {
-                    "created_at"?: string,"display_name"?: string | null,"id"?: string,"updated_at"?: string,"weight_unit"?: string
+                    "created_at"?: string,"display_name"?: string | null,"id"?: string,"timezone"?: string,"updated_at"?: string,"weight_unit"?: string
                   }
                   Relationships: [
                     
@@ -187,6 +205,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "exercises"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "session_exercises_session_id_user_id_fkey"
+      columns: ["session_id","user_id"]
+isOneToOne: false
+      referencedRelation: "session_summaries"
+      referencedColumns: ["id","user_id"]
     },{
       foreignKeyName: "session_exercises_session_id_user_id_fkey"
       columns: ["session_id","user_id"]
@@ -270,11 +294,57 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "exercise_session_bests": {
+                  Row: {
+                    "best_e1rm_kg": number | null,"exercise_id": string,"exercise_name": string,"max_reps": number | null,"session_exercise_id": string,"session_id": string,"started_at": string,"top_weight_kg": number | null,"top_weight_reps": number | null,"user_id": string,"volume_kg": number | null,"working_set_count": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "session_exercises_exercise_id_fkey"
+      columns: ["exercise_id"]
+isOneToOne: false
+      referencedRelation: "exercises"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"session_summaries": {
+                  Row: {
+                    "ended_at": string | null,"exercise_count": number | null,"id": string,"name": string,"plan_id": string | null,"started_at": string,"status": string,"user_id": string,"volume_kg": number | null,"working_set_count": number | null,"workout_day_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "workout_sessions_plan_id_fkey"
+      columns: ["plan_id"]
+isOneToOne: false
+      referencedRelation: "workout_plans"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "workout_sessions_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "workout_sessions_workout_day_id_fkey"
+      columns: ["workout_day_id"]
+isOneToOne: false
+      referencedRelation: "workout_days"
+      referencedColumns: ["id"]
+    }
+                  ]
+                }
           }
           Functions: {
-            "is_setup_complete":
+            "estimate_1rm":
+{ Args: { "reps": number,"weight_kg": number }; Returns: number
+                           },
+"is_setup_complete":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"is_valid_timezone":
+{ Args: { "tz": string }; Returns: boolean
                            }
           }
           Enums: {
