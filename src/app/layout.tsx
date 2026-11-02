@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
   description: "Private gym journal for logging workouts and tracking strength progression.",
   applicationName: "FitTrack",
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, title: "FitTrack", statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -29,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         {children}
         <Toaster position="top-center" />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

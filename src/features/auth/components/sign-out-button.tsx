@@ -1,12 +1,15 @@
+"use client";
+
 import { LogOut } from "lucide-react";
 
 import { SubmitButton } from "@/components/forms/submit-button";
+import { clearOfflineCaches } from "@/components/pwa/service-worker-registration";
 
 import { signOut } from "../actions";
 
 export function SignOutButton() {
   return (
-    <form action={signOut}>
+    <form action={signOut} onSubmit={() => void clearOfflineCaches()}>
       <SubmitButton variant="ghost" pendingLabel="Signing out…" className="h-10 w-auto px-3 text-sm">
         <LogOut aria-hidden />
         Sign out
