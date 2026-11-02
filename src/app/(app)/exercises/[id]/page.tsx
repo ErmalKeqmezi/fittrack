@@ -1,5 +1,6 @@
 import { Dumbbell, History, Info } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BackLink } from "@/components/layout/back-link";
@@ -114,6 +115,14 @@ export default async function ExerciseDetailPage({ params }: PageProps<"/exercis
               />
             </dl>
           )}
+          {usage.sessionCount ? (
+            <Link
+              href={`${routes.progress}/exercises/${exercise.id}?range=all`}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl border border-border text-sm font-medium text-primary transition-colors hover:bg-secondary"
+            >
+              View progression and records
+            </Link>
+          ) : null}
           {usage.planCount ? (
             <p className="mt-4 text-xs text-muted-foreground">
               Used in {usage.planCount} planned {usage.planCount === 1 ? "slot" : "slots"} across your workout plans.

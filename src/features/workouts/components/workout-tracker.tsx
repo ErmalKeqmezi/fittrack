@@ -13,7 +13,7 @@ import { ExercisePickerDialog } from "@/features/exercises/components/exercise-p
 import type { Exercise } from "@/features/exercises/types";
 import { formatVolume } from "@/lib/format";
 
-import { discardWorkout, finishWorkout, loadPreviousPerformance, saveWorkoutEdits } from "../actions";
+import { discardWorkout, finishWorkout, loadPreviousPerformance, saveWorkoutEdits, type NewRecord } from "../actions";
 import { clearDraft, pickInitialState } from "../drafts";
 import {
   exerciseProgress,
@@ -38,6 +38,13 @@ type Props = {
   timeZone: string;
   planName: string | null;
 };
+
+function describeRecord(r: NewRecord) {
+  const was = Math.round(r.previousValue * 100) / 100;
+  if (r.recordType === "max_weight") return `Heaviest: ${r.weightKg} kg × ${r.reps} (was ${was} kg)`;
+  if (r.recordType === "max_reps") return `Most reps: ${r.reps} @ ${r.weightKg} kg (was ${was})`;
+  return `Best est. 1RM: ${r.value} kg from ${r.weightKg} kg × ${r.reps} (was ${was} kg)`;
+}
 
 function toLocalInput(iso: string) {
   const d = new Date(iso);
@@ -99,6 +106,9 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
       }
       clearDraft(state.sessionId);
       toast.success("Workout finished. Nice work!");
+      for (const record of result.records) {
+        toast(`New PR · ${record.exerciseName}`, { description: describeRecord(record), duration: 8000, icon: "🏆" });
+      }
       router.replace(`${routes.workouts}/${state.sessionId}`);
       router.refresh();
     });

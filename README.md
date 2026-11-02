@@ -3,7 +3,7 @@
 A private, single-user gym journal: log workouts, track strength progression and personal records.
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui and Supabase.
 
-> **Status:** Phase 5 complete: workout tracking and history.
+> **Status:** Phase 6 complete: progress analytics and personal records.
 
 ## Requirements
 
@@ -102,6 +102,9 @@ Migrations live in `supabase/migrations/`:
 7. `…_workout_tracking.sql`: `start_workout_session` (from a plan day or empty; resumes an
    unfinished one), `save_workout_session` (idempotent full snapshot), `finish_workout_session`,
    `get_previous_performance`
+8. `…_personal_records.sql`: `recompute_personal_records` (current best per exercise and type,
+   rebuilt from logged sets), called when a workout is finished, edited or deleted
+   (`delete_workout_session`); `finish_workout_session` returns the records a workout beat
 
 ```
 auth.users ─1:1─ profiles
@@ -151,6 +154,21 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   totals, est. 1RM (labelled as an estimate) and a comparison with the previous time each exercise
   was trained. Workouts can be edited (sets, exercises, notes, start time, duration) or deleted.
 
+## Progress and personal records
+
+- **Progress** (`/progress`): workouts, volume, working sets and average duration for a range
+  (7 days, 30 days, 3 months, 6 months, all time), each compared with the previous equal period;
+  weekly (12 weeks) and monthly (12 months) volume charts; and every trained exercise with its
+  heaviest top set (actual), best est. 1RM (estimated) and change between first and last session.
+- **Exercise progression** (`/progress/exercises/[id]`): all-time records, a per-session chart
+  (top set weight, est. 1RM, volume or most reps; estimates drawn dashed and labelled), range
+  filters and a session table linking to each workout.
+- **Personal records** (`/progress/records`): heaviest weight, most reps (single set) and best
+  est. 1RM per exercise with the date achieved. Records are rebuilt from your sets whenever a
+  workout is finished, edited or deleted, so they are never duplicated or stale. Finishing a
+  workout announces records it beat (a first-ever log is not announced); sets holding a record
+  carry a PR badge in the workout view.
+
 ## How statistics are calculated
 
 All dashboard figures come from recorded sets. Nothing is estimated unless labelled.
@@ -159,6 +177,9 @@ All dashboard figures come from recorded sets. Nothing is estimated unless label
 - **Weeks** are ISO weeks (Monday–Sunday) in the timezone set in Settings (detected at setup).
 - **Estimated 1RM** uses the Epley formula `w × (1 + reps / 30)`, only for sets of 1–12 reps.
   It is always shown separately from actual top sets (weight × reps).
+- **Records** use completed working sets only. Ties: heaviest weight prefers more reps, most reps
+  prefers the heavier set, then the earliest date.
+- **Period changes** compare the selected range with the equally long period just before it.
 - **Progression highlights** compare an exercise's latest session with the session before it.
   Exercises with a single session are not compared.
 - **Today's workout** is the day of the active plan whose weekday matches today.
@@ -182,6 +203,7 @@ src/
   components/charts/   shared chart theme and tooltip
   features/<domain>/   business logic per domain: actions.ts, queries.ts, schemas.ts, components/
                        (auth, dashboard, analytics, profile, exercises, planner, workouts)
+  components/charts/   bar and line charts (one measure at a time, table fallback)
   hooks/               client hooks (useFormAction: forms that keep values on errors)
   lib/                 supabase clients, env validation, utilities
   config/              route constants and navigation
@@ -201,5 +223,5 @@ Each phase adds its pages to `src/config/navigation.ts`.
 3. ✅ Exercise library
 4. ✅ Workout planner
 5. ✅ Workout tracking and sessions
-6. Progress analytics and personal records
+6. ✅ Progress analytics and personal records
 7. PWA, testing, deployment

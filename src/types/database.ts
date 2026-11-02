@@ -346,11 +346,16 @@ isOneToOne: false
 "create_workout_plan":
 { Args: { "p_days"?: Json,"p_description"?: string,"p_name": string,"p_template_key"?: string }; Returns: string
                            },
+"delete_workout_session":
+{ Args: { "p_session_id": string }; Returns: undefined
+                           },
 "estimate_1rm":
 { Args: { "reps": number,"weight_kg": number }; Returns: number
                            },
 "finish_workout_session":
-{ Args: { "p_session_id": string }; Returns: undefined
+{ Args: { "p_session_id": string }; Returns: {
+              "exercise_id": string,"exercise_name": string,"previous_value": number,"record_type": string,"reps": number,"value": number,"weight_kg": number
+            }[]
                            },
 "get_previous_performance":
 { Args: { "p_before": string,"p_exclude_session_id"?: string,"p_exercise_ids": (string)[] }; Returns: {
@@ -368,6 +373,9 @@ isOneToOne: false
                            },
 "move_workout_day":
 { Args: { "p_day_id": string,"p_offset": number }; Returns: undefined
+                           },
+"recompute_personal_records":
+{ Args: { "p_exercise_ids": (string)[] }; Returns: undefined
                            },
 "save_custom_exercise":
 { Args: { "p_category": string,"p_description": string,"p_equipment": string,"p_exercise_id"?: string,"p_name": string,"p_primary_muscle_group_id": number,"p_secondary_muscle_group_ids": (number)[] }; Returns: string

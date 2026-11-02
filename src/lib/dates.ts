@@ -77,3 +77,11 @@ export function daysBetween(a: DateKey, b: DateKey) {
 export function formatDateKey(key: DateKey, options: Intl.DateTimeFormatOptions, locale = "en-GB") {
   return new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(keyToUtcMs(key));
 }
+
+/** Same day n months later/earlier, clamped to the month's last day. */
+export function addMonths(key: DateKey, months: number): DateKey {
+  const [y, m, d] = key.split("-").map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  return utcMsToKey(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(d, lastDay)));
+}

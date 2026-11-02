@@ -1,6 +1,8 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight, TrendingUp, Trophy } from "lucide-react";
+import Link from "next/link";
 
 import { EmptyState, Panel, PanelHeader } from "@/components/panel";
+import { routes } from "@/config/routes";
 import { formatDateKey, toDateKey } from "@/lib/dates";
 import { formatKg, formatSignedKg } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -65,9 +67,16 @@ export function ProgressHighlights({ data }: { data: DashboardData }) {
       )}
 
       <div className="mt-5 border-t border-border pt-4">
-        <p className="mb-2.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Trophy className="size-3.5 text-primary" aria-hidden /> Latest personal records
-        </p>
+        <div className="mb-2.5 flex items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Trophy className="size-3.5 text-primary" aria-hidden /> Latest personal records
+          </p>
+          {data.latestRecords.length ? (
+            <Link href={routes.records} className="text-xs font-medium text-primary hover:underline">
+              View all
+            </Link>
+          ) : null}
+        </div>
         {data.latestRecords.length === 0 ? (
           <p className="text-xs text-muted-foreground">No personal records yet. New bests appear here as you set them.</p>
         ) : (

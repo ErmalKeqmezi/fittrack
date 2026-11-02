@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, NotebookText } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, NotebookText, Trophy } from "lucide-react";
 
 import { Panel } from "@/components/panel";
 import { estimateOneRepMax } from "@/features/analytics/calculations";
@@ -27,14 +27,19 @@ function Delta({ value, unit = "kg" }: { value: number; unit?: "kg" | "reps" }) 
 }
 
 /** One logged exercise with its sets and a comparison to the previous time it was trained. */
+const RECORD_SHORT = { max_weight: "Heaviest", max_reps: "Most reps", best_e1rm: "Best e1RM" } as const;
+
 export function LoggedExercise({
   exercise,
   previous,
   timeZone,
+  recordSets,
 }: {
   exercise: TrackerExercise;
   previous: PreviousPerformance | undefined;
   timeZone: string;
+  /** Sets that currently hold a personal record. */
+  recordSets: Map<string, (keyof typeof RECORD_SHORT)[]>;
 }) {
   const sets = workingSets(exercise);
   const working = sets.filter((s) => !s.isWarmup);
@@ -83,6 +88,15 @@ export function LoggedExercise({
                 </td>
                 <td className="py-2.5 font-medium tabular-nums">
                   {formatKg(s.w)} × {s.r}
+                  {recordSets.get(s.id)?.length ? (
+                    <span
+                      className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 align-middle text-[10px] font-semibold text-brand-soft"
+                      title={`Current personal record: ${recordSets.get(s.id)!.map((t) => RECORD_SHORT[t]).join(", ")}`}
+                    >
+                      <Trophy className="size-3" aria-hidden /> PR
+                      <span className="sr-only">: {recordSets.get(s.id)!.map((t) => RECORD_SHORT[t]).join(", ")}</span>
+                    </span>
+                  ) : null}
                 </td>
                 <td className="py-2.5 text-right text-muted-foreground tabular-nums">{s.rpeValue ?? "—"}</td>
                 <td className="py-2.5 pr-4 text-right text-xs text-muted-foreground tabular-nums sm:pr-5">

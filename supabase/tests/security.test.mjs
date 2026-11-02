@@ -158,6 +158,23 @@ r = await owner.rpc("finish_workout_session", { p_session_id: live });
 check("cannot finish twice", r.error?.code === "22023", r.error?.code);
 r = await owner.rpc("get_previous_performance", { p_exercise_ids: [builtin.id], p_before: new Date(Date.now() + 60000).toISOString() });
 check("previous performance returns last completed sets", r.data?.some((row) => row.session_id === live && Number(row.weight_kg) === 80), r.error?.message);
+// Personal records follow the logged sets
+r = await owner.from("personal_records").select("record_type, value").eq("exercise_id", builtin.id);
+check("records created on finish (one per type)", r.data?.length === 3, JSON.stringify(r.data));
+r = await owner.rpc("save_workout_session", { p_session_id: live, p_name: "Live", p_notes: "", p_exercises: [{ id: seId, exercise_id: builtin.id, notes: "", sets: [
+  { id: setDone, weight_kg: 90, reps: 3, rpe: null, is_warmup: false, is_completed: true },
+] }] });
+r = await owner.from("personal_records").select("record_type, value").eq("exercise_id", builtin.id).order("record_type");
+check("editing a workout updates records without duplicates", r.data?.length === 3 && r.data.find((x) => x.record_type === "max_weight")?.value == 90, JSON.stringify(r.data));
+r = await owner.rpc("delete_workout_session", { p_session_id: live });
+check("delete_workout_session deletes a completed workout", !r.error, r.error?.message);
+r = await owner.from("personal_records").select("record_type, value, session_id").eq("exercise_id", builtin.id);
+check(
+  "deleting a workout falls back to the next best records",
+  r.data?.length === 3 && r.data.every((x) => x.session_id !== live) && r.data.find((x) => x.record_type === "max_weight")?.value == 70,
+  JSON.stringify(r.data),
+);
+
 r = await owner.rpc("start_workout_session", {});
 const empty = r.data;
 r = await owner.rpc("finish_workout_session", { p_session_id: empty });

@@ -6,6 +6,7 @@ import { BackLink } from "@/components/layout/back-link";
 import { Panel } from "@/components/panel";
 import { routes } from "@/config/routes";
 import { sessionDurationMinutes } from "@/features/analytics/calculations";
+import { getRecordSetIds } from "@/features/analytics/queries";
 import { requireUser } from "@/features/auth/queries";
 import { listExercises } from "@/features/exercises/queries";
 import { LoggedExercise } from "@/features/workouts/components/workout-detail";
@@ -50,6 +51,7 @@ export default async function WorkoutPage({ params }: PageProps<"/workouts/[id]"
     );
   }
 
+  const recordSets = await getRecordSetIds(state.exercises.flatMap((e) => e.sets.map((s) => s.id)));
   const totals = state.exercises.reduce(
     (acc, e) => {
       const p = exerciseProgress(e);
@@ -99,7 +101,13 @@ export default async function WorkoutPage({ params }: PageProps<"/workouts/[id]"
 
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
         {state.exercises.map((exercise) => (
-          <LoggedExercise key={exercise.id} exercise={exercise} previous={previous[exercise.exerciseId]} timeZone={user.timeZone} />
+          <LoggedExercise
+            key={exercise.id}
+            exercise={exercise}
+            previous={previous[exercise.exerciseId]}
+            timeZone={user.timeZone}
+            recordSets={recordSets}
+          />
         ))}
       </div>
     </div>

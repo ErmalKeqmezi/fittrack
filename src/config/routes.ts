@@ -12,6 +12,8 @@ export const routes = {
   workout: "/workout",
   workouts: "/workouts",
   history: "/history",
+  progress: "/progress",
+  records: "/progress/records",
 } as const;
 
 /** Paths that are reachable without a session. Everything else is private. */

@@ -16,10 +16,22 @@ import type { SessionSnapshot } from "./types";
 export type SaveResult = { ok: true; savedAt: string } | { ok: false; message: string; retryable: boolean };
 export type ActionResult = { ok: true; message?: string } | { ok: false; message: string };
 
+/** A personal record this workout beat (first-ever logs are not reported). */
+export type NewRecord = {
+  exerciseName: string;
+  recordType: "max_weight" | "max_reps" | "best_e1rm";
+  value: number;
+  weightKg: number;
+  reps: number;
+  previousValue: number;
+};
+export type FinishResult = { ok: true; records: NewRecord[] } | { ok: false; message: string };
+
 const SESSION_EXPIRED = "Your session has expired. Sign in again.";
 
 function revalidateWorkouts(sessionId?: string) {
   revalidatePath(routes.dashboard);
+  revalidatePath(routes.progress, "layout");
   revalidatePath(routes.history);
   revalidatePath(routes.workout);
   revalidatePath("/exercises", "layout");
@@ -75,18 +87,31 @@ export async function saveWorkout(snapshot: SessionSnapshot): Promise<SaveResult
   return persist(snapshot);
 }
 
-/** Saves the final snapshot, then completes the session. Unfinished sets are dropped. */
-export async function finishWorkout(snapshot: SessionSnapshot): Promise<ActionResult> {
+/**
+ * Saves the final snapshot, then completes the session. Unfinished sets are
+ * dropped and personal records are recomputed; beaten records are returned.
+ */
+export async function finishWorkout(snapshot: SessionSnapshot): Promise<FinishResult> {
   if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED };
   const saved = await persist(snapshot);
   if (!saved.ok) return { ok: false, message: saved.message };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("finish_workout_session", { p_session_id: snapshot.sessionId });
+  const { data, error } = await supabase.rpc("finish_workout_session", { p_session_id: snapshot.sessionId });
   if (error) return { ok: false, message: describe(error, "Could not finish the workout. Try again.") };
 
   revalidateWorkouts(snapshot.sessionId);
-  return { ok: true, message: "Workout saved." };
+  return {
+    ok: true,
+    records: data.map((r) => ({
+      exerciseName: r.exercise_name,
+      recordType: r.record_type as NewRecord["recordType"],
+      value: Number(r.value),
+      weightKg: Number(r.weight_kg),
+      reps: r.reps,
+      previousValue: Number(r.previous_value),
+    })),
+  };
 }
 
 /** Saves edits to a completed workout. */
@@ -120,16 +145,13 @@ export async function deleteWorkout(sessionId: string): Promise<ActionResult> {
   if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED };
   if (!isUuid(sessionId)) return { ok: false, message: "Unknown workout." };
 
+  // The database function also refreshes the personal records it affected.
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("workout_sessions")
-    .delete()
-    .eq("id", sessionId)
-    .eq("status", "completed")
-    .select("id");
-  if (error || !data.length) return { ok: false, message: "Could not delete the workout." };
+  const { error } = await supabase.rpc("delete_workout_session", { p_session_id: sessionId });
+  if (error) return { ok: false, message: describe(error, "Could not delete the workout.") };
 
   revalidateWorkouts();
+  revalidatePath(routes.progress, "layout");
   redirect(routes.history);
 }
 

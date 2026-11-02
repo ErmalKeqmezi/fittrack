@@ -1,4 +1,4 @@
-import { addDays, daysBetween, startOfWeek, toDateKey, type DateKey } from "@/lib/dates";
+import { addDays, addMonths, daysBetween, startOfMonth, startOfWeek, toDateKey, type DateKey } from "@/lib/dates";
 
 /**
  * Pure training-statistics functions. They only aggregate recorded data;
@@ -155,4 +155,151 @@ export function progressionHighlights(
         (b.e1rmChangeKg ?? b.topWeightChangeKg) - (a.e1rmChangeKg ?? a.topWeightChangeKg),
     )
     .slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Ranges and period comparisons
+// ---------------------------------------------------------------------------
+
+export const RANGES = ["7d", "30d", "3m", "6m", "all"] as const;
+export type Range = (typeof RANGES)[number];
+
+export const RANGE_LABELS: Record<Range, string> = {
+  "7d": "7 days",
+  "30d": "30 days",
+  "3m": "3 months",
+  "6m": "6 months",
+  all: "All time",
+};
+
+export function parseRange(value: unknown, fallback: Range = "3m"): Range {
+  return typeof value === "string" && (RANGES as readonly string[]).includes(value) ? (value as Range) : fallback;
+}
+
+/** First day (inclusive) of the range ending today, or null for all time. */
+export function rangeStart(range: Range, today: DateKey): DateKey | null {
+  switch (range) {
+    case "7d":
+      return addDays(today, -6);
+    case "30d":
+      return addDays(today, -29);
+    case "3m":
+      return addDays(addMonths(today, -3), 1);
+    case "6m":
+      return addDays(addMonths(today, -6), 1);
+    case "all":
+      return null;
+  }
+}
+
+/** The equally long period just before the range, for "vs previous period". */
+export function previousPeriod(range: Range, today: DateKey): { from: DateKey; to: DateKey } | null {
+  const from = rangeStart(range, today);
+  if (!from) return null;
+  const length = daysBetween(from, today) + 1;
+  return { from: addDays(from, -length), to: addDays(from, -1) };
+}
+
+export function inPeriod(startedAt: string, timeZone: string, from: DateKey | null, to: DateKey) {
+  const key = toDateKey(startedAt, timeZone);
+  return (!from || key >= from) && key <= to;
+}
+
+export type PeriodTotals = { workouts: number; volumeKg: number; workingSets: number; avgDurationMinutes: number | null };
+
+export function periodTotals(sessions: SessionSummary[]): PeriodTotals {
+  const durations = sessions.map(sessionDurationMinutes).filter((m): m is number => m !== null);
+  return {
+    workouts: sessions.length,
+    volumeKg: totalVolume(sessions),
+    workingSets: sessions.reduce((sum, s) => sum + s.workingSetCount, 0),
+    avgDurationMinutes: durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null,
+  };
+}
+
+/** Relative change in percent; null when there is nothing to compare with. */
+export function percentChange(current: number, previous: number): number | null {
+  if (previous === 0) return null;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
+}
+
+export type MonthBucket = { monthStart: DateKey; workouts: number; volumeKg: number };
+
+/** The last `months` calendar months (oldest first), including empty ones. */
+export function monthlyBuckets(
+  sessions: Pick<SessionSummary, "startedAt" | "volumeKg">[],
+  today: DateKey,
+  timeZone: string,
+  months: number,
+): MonthBucket[] {
+  const current = startOfMonth(today);
+  const buckets = Array.from({ length: months }, (_, i) => ({
+    monthStart: addMonths(current, i - months + 1),
+    workouts: 0,
+    volumeKg: 0,
+  }));
+  const byStart = new Map(buckets.map((b) => [b.monthStart, b]));
+  for (const session of sessions) {
+    const bucket = byStart.get(startOfMonth(toDateKey(session.startedAt, timeZone)));
+    if (bucket) {
+      bucket.workouts += 1;
+      bucket.volumeKg = round2(bucket.volumeKg + session.volumeKg);
+    }
+  }
+  return buckets;
+}
+
+// ---------------------------------------------------------------------------
+// Per-exercise progression
+// ---------------------------------------------------------------------------
+
+export type ExerciseSessionStats = {
+  sessionId: string;
+  startedAt: string;
+  topWeightKg: number;
+  topWeightReps: number;
+  maxReps: number;
+  bestE1rmKg: number | null;
+  volumeKg: number;
+  workingSets: number;
+};
+
+export type ExerciseRangeSummary = {
+  sessions: number;
+  volumeKg: number;
+  /** Actual: heaviest top set in the range. */
+  bestTopSet: { weightKg: number; reps: number; startedAt: string } | null;
+  /** Estimated: best e1RM in the range. */
+  bestE1rmKg: number | null;
+  maxReps: number;
+  /** First vs last session in the range. */
+  topWeightChangeKg: number | null;
+  e1rmChangeKg: number | null;
+};
+
+/** Summary of an exercise's sessions (oldest first) within a range. */
+export function summarizeExercise(points: ExerciseSessionStats[]): ExerciseRangeSummary {
+  let best: ExerciseRangeSummary["bestTopSet"] = null;
+  let bestE1rm: number | null = null;
+  let maxReps = 0;
+  for (const p of points) {
+    if (!best || p.topWeightKg > best.weightKg || (p.topWeightKg === best.weightKg && p.topWeightReps > best.reps)) {
+      best = { weightKg: p.topWeightKg, reps: p.topWeightReps, startedAt: p.startedAt };
+    }
+    if (p.bestE1rmKg !== null && (bestE1rm === null || p.bestE1rmKg > bestE1rm)) bestE1rm = p.bestE1rmKg;
+    maxReps = Math.max(maxReps, p.maxReps);
+  }
+  const first = points[0];
+  const last = points.at(-1);
+  const comparable = points.length >= 2 && first && last;
+  return {
+    sessions: points.length,
+    volumeKg: round2(points.reduce((sum, p) => sum + p.volumeKg, 0)),
+    bestTopSet: best,
+    bestE1rmKg: bestE1rm,
+    maxReps,
+    topWeightChangeKg: comparable ? round2(last.topWeightKg - first.topWeightKg) : null,
+    e1rmChangeKg:
+      comparable && first.bestE1rmKg !== null && last.bestE1rmKg !== null ? round2(last.bestE1rmKg - first.bestE1rmKg) : null,
+  };
 }
