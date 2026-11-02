@@ -3,7 +3,7 @@
 A private, single-user gym journal: log workouts, track strength progression and personal records.
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui and Supabase.
 
-> **Status:** Phase 4 complete: workout planner.
+> **Status:** Phase 5 complete: workout tracking and history.
 
 ## Requirements
 
@@ -99,6 +99,9 @@ Migrations live in `supabase/migrations/`:
 6. `…_planner.sql`: one weekday per day per plan, and atomic planner functions
    (`create_workout_plan`, `set_active_plan`, `add/update/move_workout_day`,
    `add/move_plan_exercise`) with limits of 14 days per plan and 20 exercises per day
+7. `…_workout_tracking.sql`: `start_workout_session` (from a plan day or empty; resumes an
+   unfinished one), `save_workout_session` (idempotent full snapshot), `finish_workout_session`,
+   `get_previous_performance`
 
 ```
 auth.users ─1:1─ profiles
@@ -127,6 +130,26 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
 - Templates (Push/Pull/Legs, Upper/Lower, Arnold Split, Full Body) are copied into a normal,
   editable plan. A unit test checks every template exercise exists in the built-in library.
 - Deleting a plan or day never deletes logged workouts; sessions keep their own name snapshot.
+
+## Workout tracking
+
+- **Start** from today's planned day (dashboard), any plan day, or an empty workout (`/workout`).
+  Only one workout can be in progress; a banner links back to it from every page.
+- **Log** weight (kg, decimal comma accepted), reps and optional RPE per set. Tap the set number
+  to mark a warm-up. Tap ✓ to complete a set; an empty row takes the suggested value (last time's
+  matching set, else the row above). Only completed sets are saved to your history.
+- **Last time**: each exercise shows the sets from the most recent completed session, and every
+  row shows its matching previous set (warm-ups match warm-ups, working sets match working sets).
+- **Rest timer** starts after each completed working set (plan rest time, else 90 s), with
+  −15/+15/skip and a vibration when it ends.
+- **Saving**: every change is written to an on-device draft instantly and autosaved to Supabase
+  after a short pause, retried while offline and when the connection returns. Saves are full,
+  idempotent snapshots with client-generated ids, so retries never duplicate sets.
+- **Finish** drops unfinished rows and empty exercises and renumbers sets. **Discard** deletes
+  the in-progress workout.
+- **History** (`/history`) lists completed workouts by month. Each workout shows its sets, notes,
+  totals, est. 1RM (labelled as an estimate) and a comparison with the previous time each exercise
+  was trained. Workouts can be edited (sets, exercises, notes, start time, duration) or deleted.
 
 ## How statistics are calculated
 
@@ -158,7 +181,7 @@ src/
   components/layout/   sidebar (desktop), header + bottom nav (mobile), page header
   components/charts/   shared chart theme and tooltip
   features/<domain>/   business logic per domain: actions.ts, queries.ts, schemas.ts, components/
-                       (auth, dashboard, analytics, profile, exercises, planner)
+                       (auth, dashboard, analytics, profile, exercises, planner, workouts)
   hooks/               client hooks (useFormAction: forms that keep values on errors)
   lib/                 supabase clients, env validation, utilities
   config/              route constants and navigation
@@ -169,7 +192,7 @@ supabase/
   tests/               database security tests
 ```
 
-Upcoming phases add `features/workouts`. Each phase adds its pages to `src/config/navigation.ts`.
+Each phase adds its pages to `src/config/navigation.ts`.
 
 ## Roadmap
 
@@ -177,6 +200,6 @@ Upcoming phases add `features/workouts`. Each phase adds its pages to `src/confi
 2. ✅ Responsive UI shell and dashboard
 3. ✅ Exercise library
 4. ✅ Workout planner
-5. Workout tracking and sessions
+5. ✅ Workout tracking and sessions
 6. Progress analytics and personal records
 7. PWA, testing, deployment

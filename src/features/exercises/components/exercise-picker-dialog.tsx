@@ -2,29 +2,34 @@
 
 import { Check, Search } from "lucide-react";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { BODY_REGION_LABELS, BODY_REGIONS, EQUIPMENT_LABELS, type BodyRegion } from "@/features/exercises/constants";
-import { defaultFilters, filterExercises } from "@/features/exercises/filters";
-import type { Exercise } from "@/features/exercises/types";
 import { cn } from "@/lib/utils";
 
-import { addPlanExercises } from "../actions";
-import { MAX_EXERCISES_PER_DAY } from "../constants";
+import { BODY_REGION_LABELS, BODY_REGIONS, EQUIPMENT_LABELS, type BodyRegion } from "../constants";
+import { defaultFilters, filterExercises } from "../filters";
+import type { Exercise } from "../types";
 
+/**
+ * Searchable multi-select of exercises. `onConfirm` receives the ids in pick
+ * order and returns true when the dialog should close.
+ */
 export function ExercisePickerDialog({
-  dayId,
-  dayName,
+  title,
   exercises,
   existingIds,
+  maxSelectable,
+  existingLabel = "already added",
+  onConfirm,
   trigger,
 }: {
-  dayId: string;
-  dayName: string;
+  title: string;
   exercises: Exercise[];
   existingIds: Set<string>;
+  maxSelectable: number;
+  existingLabel?: string;
+  onConfirm: (exerciseIds: string[]) => Promise<boolean>;
   trigger: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -32,7 +37,7 @@ export function ExercisePickerDialog({
   const [region, setRegion] = useState<BodyRegion | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
-  const remaining = MAX_EXERCISES_PER_DAY - existingIds.size;
+  const remaining = maxSelectable;
 
   const results = useMemo(
     () => filterExercises(exercises, { ...defaultFilters, query, region }),
@@ -56,13 +61,7 @@ export function ExercisePickerDialog({
 
   function add() {
     startTransition(async () => {
-      const result = await addPlanExercises(dayId, selected);
-      if (result.ok) {
-        toast.success(result.message);
-        reset(false);
-      } else {
-        toast.error(result.message);
-      }
+      if (await onConfirm(selected)) reset(false);
     });
   }
 
@@ -71,7 +70,7 @@ export function ExercisePickerDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-4 rounded-2xl sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add exercises to {dayName}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>Select one or more. They are added in the order you pick them.</DialogDescription>
         </DialogHeader>
 
@@ -133,7 +132,7 @@ export function ExercisePickerDialog({
                     <span className="block truncate text-sm font-medium">{exercise.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {exercise.primaryMuscle.name} · {EQUIPMENT_LABELS[exercise.equipment]}
-                      {existingIds.has(exercise.id) ? " · already in this day" : ""}
+                      {existingIds.has(exercise.id) ? ` · ${existingLabel}` : ""}
                     </span>
                   </span>
                   {isSelected ? <Check className="size-4 text-primary" aria-hidden /> : null}
@@ -145,7 +144,7 @@ export function ExercisePickerDialog({
 
         <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-xs text-muted-foreground">
-            {remaining <= 0 ? "This day is full (20 exercises)." : `${selected.length} selected`}
+            {remaining <= 0 ? "No room for more exercises." : `${selected.length} selected`}
           </p>
           <Button className="h-11 rounded-xl px-5" disabled={!selected.length || pending} onClick={add}>
             {pending ? "Adding…" : `Add ${selected.length || ""} ${selected.length === 1 ? "exercise" : "exercises"}`.replace("  ", " ")}

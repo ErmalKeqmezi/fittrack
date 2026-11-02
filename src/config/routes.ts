@@ -9,6 +9,9 @@ export const routes = {
   newExercise: "/exercises/new",
   plans: "/plans",
   newPlan: "/plans/new",
+  workout: "/workout",
+  workouts: "/workouts",
+  history: "/history",
 } as const;
 
 /** Paths that are reachable without a session. Everything else is private. */

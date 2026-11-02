@@ -2,12 +2,13 @@ import { BedDouble, ChevronRight, Plus, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Exercise } from "@/features/exercises/types";
+
+import { AddPlanExercises } from "./add-plan-exercises";
 import { cn } from "@/lib/utils";
 
 import { formatRest, formatTargets, MAX_EXERCISES_PER_DAY, WEEKDAY_LABELS, type Weekday } from "../constants";
 import type { PlanDay } from "../types";
 import { DayDialog } from "./day-dialog";
-import { ExercisePickerDialog } from "./exercise-picker-dialog";
 import { TargetsDialog } from "./targets-dialog";
 
 export function DayCard({
@@ -104,11 +105,11 @@ export function DayCard({
             <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">No exercises yet.</p>
           )}
           <div className="border-t border-border p-3 sm:px-5">
-            <ExercisePickerDialog
+            <AddPlanExercises
               dayId={day.id}
               dayName={day.name}
-              exercises={library}
-              existingIds={new Set(day.exercises.map((e) => e.exercise.id))}
+              library={library}
+              existingIds={day.exercises.map((e) => e.exercise.id)}
               trigger={
                 <Button
                   variant="ghost"

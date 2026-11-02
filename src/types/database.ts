@@ -349,6 +349,14 @@ isOneToOne: false
 "estimate_1rm":
 { Args: { "reps": number,"weight_kg": number }; Returns: number
                            },
+"finish_workout_session":
+{ Args: { "p_session_id": string }; Returns: undefined
+                           },
+"get_previous_performance":
+{ Args: { "p_before": string,"p_exclude_session_id"?: string,"p_exercise_ids": (string)[] }; Returns: {
+              "exercise_id": string,"is_warmup": boolean,"reps": number,"rpe": number,"session_id": string,"set_number": number,"started_at": string,"weight_kg": number
+            }[]
+                           },
 "is_setup_complete":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -364,8 +372,14 @@ isOneToOne: false
 "save_custom_exercise":
 { Args: { "p_category": string,"p_description": string,"p_equipment": string,"p_exercise_id"?: string,"p_name": string,"p_primary_muscle_group_id": number,"p_secondary_muscle_group_ids": (number)[] }; Returns: string
                            },
+"save_workout_session":
+{ Args: { "p_ended_at"?: string,"p_exercises": Json,"p_name": string,"p_notes": string,"p_session_id": string,"p_started_at"?: string }; Returns: string
+                           },
 "set_active_plan":
 { Args: { "p_active": boolean,"p_plan_id": string }; Returns: undefined
+                           },
+"start_workout_session":
+{ Args: { "p_workout_day_id"?: string }; Returns: string
                            },
 "update_workout_day":
 { Args: { "p_day_id": string,"p_is_rest_day": boolean,"p_name": string,"p_notes"?: string,"p_weekday": number }; Returns: undefined

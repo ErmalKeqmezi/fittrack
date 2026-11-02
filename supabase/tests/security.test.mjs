@@ -129,5 +129,42 @@ check("only one active plan", r.data?.length === 1 && r.data[0].id === plan.id, 
 r = await anon.rpc("create_workout_plan", { p_name: "Anon" });
 check("anon cannot create plans", !!r.error, r.error?.code);
 
+// Workout tracking functions
+const uuid = () => crypto.randomUUID();
+r = await owner.rpc("start_workout_session", {});
+check("start_workout_session creates an empty workout", !r.error && typeof r.data === "string", r.error?.message);
+const live = r.data;
+r = await owner.rpc("start_workout_session", {});
+check("starting again resumes the same workout", r.data === live);
+const seId = uuid(), setDone = uuid(), setOpen = uuid();
+const snapshot = { p_session_id: live, p_name: "Live", p_notes: "", p_exercises: [{ id: seId, exercise_id: builtin.id, notes: "", sets: [
+  { id: setDone, weight_kg: 80, reps: 5, rpe: 8, is_warmup: false, is_completed: true },
+  { id: setOpen, weight_kg: 80, reps: 5, rpe: null, is_warmup: false, is_completed: false },
+] }] };
+r = await owner.rpc("save_workout_session", snapshot);
+check("save_workout_session stores a snapshot", !r.error, r.error?.message);
+r = await owner.rpc("save_workout_session", snapshot);
+check("saving the same snapshot twice is idempotent", !r.error, r.error?.message);
+r = await owner.from("exercise_sets").select("id").eq("session_exercise_id", seId);
+check("no duplicate sets after retry", r.data?.length === 2, JSON.stringify(r.data));
+r = await owner.rpc("save_workout_session", { ...snapshot, p_exercises: [{ ...snapshot.p_exercises[0], exercise_id: "00000000-0000-0000-0000-00000000dead" }] });
+r = await owner.from("session_exercises").select("exercise_id").eq("id", seId).single();
+check("exercise of an existing row is never swapped", r.data?.exercise_id === builtin.id);
+r = await owner.rpc("finish_workout_session", { p_session_id: live });
+check("finish_workout_session completes", !r.error, r.error?.message);
+r = await owner.from("exercise_sets").select("id").eq("session_exercise_id", seId);
+check("finish drops unfinished sets", r.data?.length === 1 && r.data[0].id === setDone, JSON.stringify(r.data));
+r = await owner.rpc("finish_workout_session", { p_session_id: live });
+check("cannot finish twice", r.error?.code === "22023", r.error?.code);
+r = await owner.rpc("get_previous_performance", { p_exercise_ids: [builtin.id], p_before: new Date(Date.now() + 60000).toISOString() });
+check("previous performance returns last completed sets", r.data?.some((row) => row.session_id === live && Number(row.weight_kg) === 80), r.error?.message);
+r = await owner.rpc("start_workout_session", {});
+const empty = r.data;
+r = await owner.rpc("finish_workout_session", { p_session_id: empty });
+check("cannot finish a workout without sets", r.error?.code === "22023", r.error?.code);
+await owner.from("workout_sessions").delete().eq("id", empty);
+r = await anon.rpc("start_workout_session", {});
+check("anon cannot start workouts", !!r.error, r.error?.code);
+
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

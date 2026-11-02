@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { EmptyState, Panel, PanelHeader } from "@/components/panel";
 import { routes } from "@/config/routes";
+import { StartWorkoutButton } from "@/features/workouts/components/start-workout-button";
 import { formatDateKey } from "@/lib/dates";
 
 import type { TodaySchedule } from "../today";
@@ -71,8 +72,21 @@ export function TodayWorkoutCard({ schedule, today }: { schedule: TodaySchedule;
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">No exercises added to this day yet.</p>
           )}
+          {!schedule.completedToday && schedule.day.exercises.length ? (
+            <StartWorkoutButton dayId={schedule.day.id} className="mt-4 w-full">
+              Start {schedule.day.name}
+            </StartWorkoutButton>
+          ) : null}
         </div>
       )}
+      {schedule.kind !== "workout" ? (
+        <Link
+          href={routes.workout}
+          className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl border border-border text-sm font-medium text-primary transition-colors hover:bg-secondary"
+        >
+          Start a workout anyway
+        </Link>
+      ) : null}
     </Panel>
   );
 }
