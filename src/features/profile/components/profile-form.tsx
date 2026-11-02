@@ -1,14 +1,16 @@
 "use client";
 
 import { LocateFixed } from "lucide-react";
-import { startTransition, useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { FormField } from "@/components/forms/form-field";
 import { FormMessage } from "@/components/forms/form-message";
+import { NativeSelect } from "@/components/forms/native-select";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useFormAction } from "@/hooks/use-form-action";
 
 import { updateProfile, type ProfileState } from "../actions";
 
@@ -23,16 +25,8 @@ export function ProfileForm({
   timeZone: string;
   timeZones: string[];
 }) {
-  const [state, formAction, pending] = useActionState(updateProfile, initialState);
+  const { state, pending, formProps } = useFormAction(updateProfile, initialState);
   const [selectedTimeZone, setSelectedTimeZone] = useState(timeZone);
-
-  // Submitting via onSubmit (not the action prop) skips React's automatic
-  // form reset, which would revert the select to its server-rendered option.
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    startTransition(() => formAction(formData));
-  }
 
   useEffect(() => {
     if (state.status === "success" && state.message) toast.success(state.message);
@@ -44,7 +38,7 @@ export function ProfileForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-5" noValidate>
+    <form {...formProps} className="grid gap-5" noValidate>
       {state.status === "error" && state.message ? <FormMessage tone="error">{state.message}</FormMessage> : null}
       <FormField
         name="displayName"
@@ -62,21 +56,20 @@ export function ProfileForm({
             <LocateFixed aria-hidden /> Use this device&apos;s timezone
           </Button>
         </div>
-        <select
+        <NativeSelect
           id="timeZone"
           name="timeZone"
           value={selectedTimeZone}
           onChange={(event) => setSelectedTimeZone(event.target.value)}
           aria-invalid={state.fieldErrors?.timeZone ? true : undefined}
           aria-describedby="timeZone-hint"
-          className="h-11 w-full rounded-xl border border-input bg-input/30 px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
         >
           {timeZones.map((tz) => (
             <option key={tz} value={tz}>
               {tz.replaceAll("_", " ")}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <p id="timeZone-hint" className="text-xs text-muted-foreground">
           {state.fieldErrors?.timeZone ?? "Used to group workouts into your local days and weeks."}
         </p>

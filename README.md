@@ -3,7 +3,7 @@
 A private, single-user gym journal: log workouts, track strength progression and personal records.
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui and Supabase.
 
-> **Status:** Phase 2 complete: responsive app shell and dashboard.
+> **Status:** Phase 3 complete: exercise library.
 
 ## Requirements
 
@@ -70,6 +70,9 @@ See [`.env.example`](.env.example). Only browser-safe values are used:
 
 The Supabase secret/service-role key is **never** used by the app.
 
+> **shadcn note:** the shadcn CLI may add an unrelated `cn` npm package and import from it.
+> After `npx shadcn add …`, replace `from "cn"` with `from "@/lib/utils"` and `npm uninstall cn`.
+
 ## Security model
 
 - **Single account:** a `BEFORE INSERT` trigger on `auth.users` rejects any sign-up once an account exists.
@@ -88,9 +91,11 @@ Migrations live in `supabase/migrations/`:
 
 1. `…_core_schema.sql`: tables, constraints, indexes, `updated_at` triggers
 2. `…_auth_and_security.sql`: single-account guard, profile trigger, privileges, RLS policies
-3. `…_reference_data.sql`: muscle groups and the built-in exercise library (67 exercises)
+3. `…_reference_data.sql`: muscle groups and the built-in exercise library
 4. `…_dashboard_support.sql`: profile timezone, `estimate_1rm()`, and the read-only views
    `session_summaries` and `exercise_session_bests` (`security_invoker`, so RLS applies)
+5. `…_custom_exercises.sql`: `save_custom_exercise()` (atomic create/update with secondary
+   muscles; custom names may not shadow built-ins) and three forearm exercises
 
 ```
 auth.users ─1:1─ profiles
@@ -100,6 +105,15 @@ profiles ─1:N─ workout_sessions ─1:N─ session_exercises ─1:N─ exerci
                      │ plan_id / workout_day_id: ON DELETE SET NULL (history survives plan edits)
 profiles ─1:N─ personal_records (unique per exercise + record type) ─→ exercise_sets / workout_sessions
 ```
+
+## Exercise library
+
+- 70 built-in exercises across chest, back, shoulders, biceps, triceps, forearms, legs and core.
+  Built-ins are read-only.
+- Custom exercises can be created, edited, archived (hidden from the library) and deleted.
+  Exercises used in a plan or logged workout cannot be deleted (foreign keys), only archived.
+- Search matches every word against name, muscles and equipment; results rank name matches first.
+  Filters (muscle region, equipment, type, source, archived) are kept in the URL.
 
 ## How statistics are calculated
 
@@ -131,7 +145,8 @@ src/
   components/layout/   sidebar (desktop), header + bottom nav (mobile), page header
   components/charts/   shared chart theme and tooltip
   features/<domain>/   business logic per domain: actions.ts, queries.ts, schemas.ts, components/
-                       (auth, dashboard, analytics, profile)
+                       (auth, dashboard, analytics, profile, exercises)
+  hooks/               client hooks (useFormAction: forms that keep values on errors)
   lib/                 supabase clients, env validation, utilities
   config/              route constants and navigation
   types/               generated database types
@@ -141,13 +156,13 @@ supabase/
   tests/               database security tests
 ```
 
-Upcoming phases add `features/{exercises,planner,workouts}` and `hooks/`. Each phase adds its pages to `src/config/navigation.ts`.
+Upcoming phases add `features/{planner,workouts}`. Each phase adds its pages to `src/config/navigation.ts`.
 
 ## Roadmap
 
 1. ✅ Setup, database, authentication, security
 2. ✅ Responsive UI shell and dashboard
-3. Exercise library
+3. ✅ Exercise library
 4. Workout planner
 5. Workout tracking and sessions
 6. Progress analytics and personal records

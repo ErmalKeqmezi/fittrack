@@ -345,6 +345,9 @@ isOneToOne: false
                            },
 "is_valid_timezone":
 { Args: { "tz": string }; Returns: boolean
+                           },
+"save_custom_exercise":
+{ Args: { "p_category": string,"p_description": string,"p_equipment": string,"p_exercise_id"?: string,"p_name": string,"p_primary_muscle_group_id": number,"p_secondary_muscle_group_ids": (number)[] }; Returns: string
                            }
           }
           Enums: {

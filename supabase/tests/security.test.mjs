@@ -85,5 +85,20 @@ check("anon cannot read exercise_session_bests", !!r.error || r.data.length === 
 r = await owner.from("profiles").update({ timezone: "Mars/Olympus" }).eq("id", uid);
 check("invalid timezone rejected", r.error?.code === "23514", r.error?.code);
 
+// save_custom_exercise RPC
+r = await owner.rpc("save_custom_exercise", { p_name: "Cable Y Raise", p_description: "", p_primary_muscle_group_id: 7, p_secondary_muscle_group_ids: [8, 7, 8], p_equipment: "cable", p_category: "isolation" });
+check("RPC creates custom exercise", !r.error && typeof r.data === "string", r.error?.message);
+const customId = r.data;
+r = await owner.from("exercise_secondary_muscles").select("muscle_group_id").eq("exercise_id", customId);
+check("RPC dedupes secondary and drops primary", r.data?.length === 1 && r.data[0].muscle_group_id === 8, JSON.stringify(r.data));
+r = await owner.rpc("save_custom_exercise", { p_name: "Barbell Bench Press", p_description: "", p_primary_muscle_group_id: 1, p_secondary_muscle_group_ids: [], p_equipment: "barbell", p_category: "compound" });
+check("RPC rejects shadowing a built-in name", r.error?.code === "23505", r.error?.code);
+r = await owner.rpc("save_custom_exercise", { p_exercise_id: builtin.id, p_name: "Hijack", p_description: "", p_primary_muscle_group_id: 1, p_secondary_muscle_group_ids: [], p_equipment: "barbell", p_category: "compound" });
+check("RPC cannot edit a built-in exercise", r.error?.code === "P0002", r.error?.code);
+r = await anon.rpc("save_custom_exercise", { p_name: "Anon", p_description: "", p_primary_muscle_group_id: 1, p_secondary_muscle_group_ids: [], p_equipment: "barbell", p_category: "compound" });
+check("anon cannot call save_custom_exercise", !!r.error, r.error?.code);
+r = await owner.from("exercises").delete().eq("id", builtin.id).select();
+check("owner cannot delete built-in exercise", !!r.error || r.data.length === 0);
+
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);
