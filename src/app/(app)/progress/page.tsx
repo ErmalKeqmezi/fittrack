@@ -13,7 +13,9 @@ import { ChangeBadge } from "@/features/analytics/components/change-badge";
 import { RangeTabs } from "@/features/analytics/components/range-tabs";
 import { getProgressOverview } from "@/features/analytics/queries";
 import { requireUser } from "@/features/auth/queries";
+import { statValueSize } from "@/features/dashboard/components/stat-card";
 import { formatDuration, formatInteger, formatKg, formatVolume } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -57,7 +59,7 @@ export default async function ProgressPage({ searchParams }: PageProps<"/progres
                 <dt className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground sm:text-sm">
                   {label} <Icon className="size-4 text-primary" aria-hidden />
                 </dt>
-                <dd className="mt-2 text-2xl font-semibold tracking-tight whitespace-nowrap tabular-nums sm:text-3xl lg:text-2xl xl:text-3xl">{value}</dd>
+                <dd className={cn("mt-2 font-semibold tracking-tight whitespace-nowrap tabular-nums", statValueSize(value))}>{value}</dd>
                 {change !== undefined && vsLabel ? (
                   <dd className="mt-1 flex flex-wrap items-center gap-1">
                     <ChangeBadge value={change} unit="%" />

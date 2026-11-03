@@ -5,9 +5,8 @@ export function formatKg(value: number) {
   return `${kgFormatter.format(value)} kg`;
 }
 
-/** Large volumes read better in tonnes. */
+/** Volume is always shown in whole kilograms (e.g. "19,500 kg"), never tonnes. */
 export function formatVolume(kg: number) {
-  if (Math.abs(kg) >= 10_000) return `${kgFormatter.format(Math.round(kg / 100) / 10)} t`;
   return `${intFormatter.format(kg)} kg`;
 }
 
