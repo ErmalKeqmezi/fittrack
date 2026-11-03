@@ -2,7 +2,7 @@ import { CalendarCheck, ChevronRight, Clock, Dumbbell, LineChart, Trophy, Weight
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PeriodBarChart } from "@/components/charts/period-bar-chart";
+import { LazyPeriodBarChart as PeriodBarChart } from "@/components/charts/lazy-charts";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, Panel, PanelHeader } from "@/components/panel";
 import { Button } from "@/components/ui/button";

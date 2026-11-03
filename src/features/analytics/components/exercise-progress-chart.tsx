@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { ProgressLineChart, type ProgressPoint } from "@/components/charts/progress-line-chart";
+import { LazyProgressLineChart as ProgressLineChart } from "@/components/charts/lazy-charts";
+import type { ProgressPoint } from "@/components/charts/progress-line-chart";
 import type { ExerciseSessionStats } from "@/features/analytics/calculations";
 import { formatDateKey, toDateKey } from "@/lib/dates";
 import { formatKg, formatVolume } from "@/lib/format";

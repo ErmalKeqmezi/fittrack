@@ -243,7 +243,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
         title="Add exercises"
         exercises={library}
         existingIds={new Set(state.exercises.map((e) => e.exerciseId))}
-        existingLabel="already in this workout"
+        existingLabel="In workout"
         maxSelectable={MAX_SESSION_EXERCISES - state.exercises.length}
         onConfirm={addExercises}
         trigger={

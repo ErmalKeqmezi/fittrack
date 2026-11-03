@@ -73,7 +73,10 @@ export function RestTimer({
         </Button>
       </div>
       <div className="h-1 bg-secondary">
-        <div className="h-full bg-primary transition-[width] duration-300" style={{ width: `${progress * 100}%` }} />
+        <div
+          className="h-full origin-left bg-primary transition-transform duration-300 ease-linear will-change-transform"
+          style={{ transform: `scaleX(${progress})` }}
+        />
       </div>
     </div>
   );

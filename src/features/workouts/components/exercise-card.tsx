@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Gauge, ListX, MoreVertical, NotebookPen, Plus, Trash2 } from "lucide-react";
-import { useState, type Dispatch } from "react";
+import { memo, useState, type Dispatch } from "react";
 
 import { ConfirmAction } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,8 @@ function newId() {
   return crypto.randomUUID();
 }
 
-export function ExerciseCard({
+/** Memoized: typing in one exercise doesn't re-render the others. */
+export const ExerciseCard = memo(function ExerciseCard({
   exercise,
   index,
   count,
@@ -68,7 +69,7 @@ export function ExerciseCard({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="size-10 shrink-0 rounded-xl" aria-label={`Options for ${exercise.name}`}>
+            <Button variant="ghost" className="size-11 shrink-0 rounded-xl" aria-label={`Options for ${exercise.name}`}>
               <MoreVertical aria-hidden />
             </Button>
           </DropdownMenuTrigger>
@@ -157,28 +158,20 @@ export function ExerciseCard({
         <div className="grid gap-1">
           {exercise.sets.map((set, i) => {
             const label = set.isWarmup ? "W" : String(++workingIndex);
+            const suggestion = suggestionFor(exercise, i, previous);
             return (
               <SetRow
                 key={set.id}
+                exerciseId={exercise.id}
                 set={set}
                 label={label}
                 previous={matchingPreviousSet(exercise.sets, i, previous)}
-                suggestion={suggestionFor(exercise, i, previous)}
+                suggestWeight={suggestion?.weight ?? null}
+                suggestReps={suggestion?.reps ?? null}
                 showRpe={exercise.showRpe}
                 editingSets={editingSets}
                 showDone={live}
-                onChange={(field, value) => dispatch({ type: "updateSet", exerciseId: exercise.id, setId: set.id, field, value })}
-                onToggleWarmup={() => dispatch({ type: "toggleWarmup", exerciseId: exercise.id, setId: set.id })}
-                onToggleDone={() =>
-                  dispatch({
-                    type: "toggleDone",
-                    exerciseId: exercise.id,
-                    setId: set.id,
-                    suggestion: suggestionFor(exercise, i, previous),
-                    now: Date.now(),
-                  })
-                }
-                onRemove={() => dispatch({ type: "removeSet", exerciseId: exercise.id, setId: set.id })}
+                dispatch={dispatch}
               />
             );
           })}
@@ -202,4 +195,4 @@ export function ExerciseCard({
       </div>
     </section>
   );
-}
+});

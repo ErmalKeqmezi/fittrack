@@ -27,7 +27,7 @@ export function AddPlanExercises({
       title={`Add exercises to ${dayName}`}
       exercises={library}
       existingIds={new Set(existingIds)}
-      existingLabel="already in this day"
+      existingLabel="In this day"
       maxSelectable={MAX_EXERCISES_PER_DAY - existingIds.length}
       trigger={trigger}
       onConfirm={async (ids) => {

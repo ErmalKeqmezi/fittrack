@@ -1,24 +1,30 @@
 "use client";
 
 import { Check, Trash2 } from "lucide-react";
-import { memo } from "react";
+import { memo, type Dispatch } from "react";
 
-import { formatWeightInput, validateSet } from "../set-values";
-import type { PreviousSet, TrackerSet } from "../types";
 import { cn } from "@/lib/utils";
 
+import { formatWeightInput, validateSet } from "../set-values";
+import type { TrackerAction } from "../tracker-state";
+import type { PreviousSet, TrackerSet } from "../types";
+
+/**
+ * Props are primitives or stable references (set objects only change when
+ * that set changes; dispatch never changes), so memo re-renders just the row
+ * being edited.
+ */
 type Props = {
+  exerciseId: string;
   set: TrackerSet;
   label: string;
   previous: PreviousSet | undefined;
-  suggestion: { weight: number; reps: number } | null;
+  suggestWeight: number | null;
+  suggestReps: number | null;
   showRpe: boolean;
   editingSets: boolean;
   showDone: boolean;
-  onChange: (field: "weight" | "reps" | "rpe", value: string) => void;
-  onToggleWarmup: () => void;
-  onToggleDone: () => void;
-  onRemove: () => void;
+  dispatch: Dispatch<TrackerAction>;
 };
 
 const inputClass =
@@ -29,18 +35,23 @@ function selectAll(e: React.FocusEvent<HTMLInputElement>) {
 }
 
 export const SetRow = memo(function SetRow({
+  exerciseId,
   set,
   label,
   previous,
-  suggestion,
+  suggestWeight,
+  suggestReps,
   showRpe,
   editingSets,
   showDone,
-  onChange,
-  onToggleWarmup,
-  onToggleDone,
-  onRemove,
+  dispatch,
 }: Props) {
+  const suggestion = suggestWeight !== null && suggestReps !== null ? { weight: suggestWeight, reps: suggestReps } : null;
+  const onChange = (field: "weight" | "reps" | "rpe", value: string) =>
+    dispatch({ type: "updateSet", exerciseId, setId: set.id, field, value });
+  const onToggleWarmup = () => dispatch({ type: "toggleWarmup", exerciseId, setId: set.id });
+  const onToggleDone = () => dispatch({ type: "toggleDone", exerciseId, setId: set.id, suggestion, now: Date.now() });
+  const onRemove = () => dispatch({ type: "removeSet", exerciseId, setId: set.id });
   const validity = validateSet(set);
   const canComplete = validity.complete || Boolean(suggestion && (set.weight === "" || validity.weight) && (set.reps === "" || validity.reps) && validity.rpe);
 
@@ -58,7 +69,7 @@ export const SetRow = memo(function SetRow({
         onClick={onToggleWarmup}
         aria-label={set.isWarmup ? `Warm-up set, tap to make it a working set` : `Set ${label}, tap to mark as warm-up`}
         className={cn(
-          "grid h-9 place-items-center rounded-lg text-sm font-semibold tabular-nums",
+          "grid h-11 place-items-center rounded-lg text-sm font-semibold tabular-nums active:opacity-70",
           set.isWarmup ? "bg-amber-400/15 text-amber-300" : "bg-secondary text-muted-foreground",
         )}
       >

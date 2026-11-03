@@ -11,6 +11,8 @@ export type SyncStatus = "saved" | "pending" | "saving" | "offline" | "error";
 
 const SAVE_DELAY_MS = 1200;
 const RETRY_DELAY_MS = 8000;
+/** Draft writes are batched while typing and flushed when the app is hidden or closed. */
+const DRAFT_DELAY_MS = 300;
 
 /**
  * Keeps an in-progress workout safe: writes an on-device draft on every
@@ -23,6 +25,13 @@ export function useTrackerSync(state: TrackerState, { enabled }: { enabled: bool
   const latest = useRef(state);
   const lastSavedJson = useRef(JSON.stringify(toSnapshot(state)));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushDraft = useCallback(() => {
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = null;
+    writeDraft(latest.current);
+  }, []);
   const inFlight = useRef<Promise<boolean> | null>(null);
 
   const save = useCallback(async (): Promise<boolean> => {
@@ -74,16 +83,32 @@ export function useTrackerSync(state: TrackerState, { enabled }: { enabled: bool
     [save],
   );
 
-  // Every change: on-device draft immediately, server save after a pause.
+  // Every change: on-device draft shortly after (batched while typing), server
+  // save after a pause. The snapshot comparison runs in the save, not per key.
   useEffect(() => {
     latest.current = state;
-    writeDraft(state);
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      flushDraft();
+      if (enabled) setStatus((s) => (s === "offline" || s === "error" || s === "saving" ? s : "pending"));
+    }, DRAFT_DELAY_MS);
     if (!enabled) return;
-    if (JSON.stringify(toSnapshot(state)) !== lastSavedJson.current) {
-      setStatus((s) => (s === "offline" || s === "error" ? s : "pending"));
-      schedule(SAVE_DELAY_MS);
-    }
-  }, [state, enabled, schedule]);
+    schedule(SAVE_DELAY_MS);
+  }, [state, enabled, schedule, flushDraft]);
+
+  // Never lose the last keystrokes: write the draft when hidden, closed or unmounted.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushDraft();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flushDraft);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flushDraft);
+      flushDraft();
+    };
+  }, [flushDraft]);
 
   // Sync as soon as the connection or the tab comes back.
   useEffect(() => {

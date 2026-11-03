@@ -1,6 +1,6 @@
 import { Activity, BarChart3 } from "lucide-react";
 
-import { PeriodBarChart } from "@/components/charts/period-bar-chart";
+import { LazyPeriodBarChart as PeriodBarChart } from "@/components/charts/lazy-charts";
 import { EmptyState, Panel, PanelHeader } from "@/components/panel";
 import { weeklyBars } from "@/features/analytics/chart-data";
 
