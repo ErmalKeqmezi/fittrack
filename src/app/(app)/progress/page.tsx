@@ -10,6 +10,7 @@ import { routes } from "@/config/routes";
 import { parseRange, RANGE_LABELS } from "@/features/analytics/calculations";
 import { monthlyBars, weeklyBars } from "@/features/analytics/chart-data";
 import { ChangeBadge } from "@/features/analytics/components/change-badge";
+import { MuscleVolume } from "@/features/analytics/components/muscle-volume";
 import { RangeTabs } from "@/features/analytics/components/range-tabs";
 import { getProgressOverview } from "@/features/analytics/queries";
 import { requireUser } from "@/features/auth/queries";
@@ -80,6 +81,13 @@ export default async function ProgressPage({ searchParams }: PageProps<"/progres
               <PeriodBarChart data={monthlyBars(data.monthly)} caption="Monthly training volume" />
             </Panel>
           </div>
+
+          <MuscleVolume
+            entries={data.muscleVolume}
+            untrained={data.untrainedMuscles}
+            showPerWeek={range !== "7d"}
+            rangeLabel={range === "all" ? "all time" : `last ${RANGE_LABELS[range].toLowerCase()}`}
+          />
 
           <Panel className="p-0 sm:p-0">
             <div className="p-4 pb-3 sm:px-5">

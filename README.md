@@ -131,8 +131,17 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   matching set, else the row above). Only completed sets are saved to your history.
 - **Last time**: each exercise shows the sets from the most recent completed session, and every
   row shows its matching previous set (warm-ups match warm-ups, working sets match working sets).
+- **Progression hints** (planned exercises): double progression from your own last session. Once
+  every target set reaches the top of the rep range, it suggests 2.5 kg more at the bottom of the
+  range; otherwise it suggests the same weight and one more rep. Nothing is logged until you tap
+  *Use* and then complete the set yourself.
+- **Warm-ups**: *Add warm-up sets* in an exercise's menu adds 50%, 70% and 85% of the weight you
+  typed, the suggested weight or last time's top weight, rounded down to 2.5 kg (one set under 30 kg).
 - **Rest timer** starts after each completed working set (plan rest time, else 90 s), with
-  −15/+15/skip and a vibration when it ends.
+  −15/+15/skip. When it ends: sound, vibration and, while the app is in the background, an optional
+  notification (Settings). The screen stays on during rest. Browsers pause apps on a locked phone,
+  so an alert can arrive late if you lock it yourself; iPhones need the app on the Home Screen for
+  notifications, ignore vibration, and mute the sound with the silent switch.
 - **Saving**: every change is written to an on-device draft instantly and autosaved to Supabase
   after a short pause, retried while offline and when the connection returns. Saves are full,
   idempotent snapshots with client-generated ids, so retries never duplicate sets.
@@ -151,11 +160,24 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
 - **Exercise progression** (`/progress/exercises/[id]`): all-time records, a per-session chart
   (top set weight, est. 1RM, volume or most reps; estimates drawn dashed and labelled), range
   filters and a session table linking to each workout.
+- **Sets per muscle group** (`/progress`): completed working sets for the selected range, averaged
+  per week (a total for 7 days), plus muscles not trained. A set counts fully for the main muscle
+  and as half for secondary muscles.
 - **Personal records** (`/progress/records`): heaviest weight, most reps (single set) and best
   est. 1RM per exercise with the date achieved. Records are rebuilt from your sets whenever a
   workout is finished, edited or deleted, so they are never duplicated or stale. Finishing a
   workout announces records it beat (a first-ever log is not announced); sets holding a record
   carry a PR badge in the workout view.
+
+## Exporting your data
+
+Settings → *Your data* downloads your data (`/api/export`, signed-in only, never cached):
+
+- **CSV:** one row per completed set of completed workouts, for Excel or Google Sheets. Text that a
+  spreadsheet would run as a formula is neutralised.
+- **JSON:** a full backup of every table you can access: workouts, plans, custom exercises, records.
+
+The Supabase free plan has no automatic backups, so download one regularly. There is no import yet.
 
 ## Installable app (PWA) and offline use
 
@@ -174,9 +196,9 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
 
 | Layer | Command | Covers |
 | --- | --- | --- |
-| Unit (Vitest) | `npm test` | Statistics, dates/timezones, tracker state, search/filters, schemas, templates |
+| Unit (Vitest) | `npm test` | Statistics, dates/timezones, tracker state, progression and warm-ups, muscle volume, CSV export, search/filters, schemas, templates |
 | Database | `npm run test:db` | RLS isolation, single-account guard, constraints, planner, tracking and record functions |
-| End-to-end (Playwright) | `npm run test:e2e` | Setup, protected routes, logging a workout, reload safety, last-time hints, PRs, progress, plans, sign-out |
+| End-to-end (Playwright) | `npm run test:e2e` | Setup, protected routes, logging a workout, reload safety, last-time hints, PRs, progression hints, warm-ups, rest alerts, muscle volume, exports, progress, plans, offline, sign-out |
 
 ## How statistics are calculated
 

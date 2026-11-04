@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Gauge, ListX, MoreVertical, NotebookPen, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, Gauge, ListX, MoreVertical, NotebookPen, Plus, Trash2, TrendingUp } from "lucide-react";
 import { memo, useState, type Dispatch } from "react";
+import { toast } from "sonner";
 
 import { ConfirmAction } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import { formatDateKey, toDateKey } from "@/lib/dates";
 import { formatVolume } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+import { progressionHint, warmupSets } from "../coaching";
+import { parseWeight } from "../set-values";
 import { exerciseProgress, matchingPreviousSet, MAX_SETS_PER_EXERCISE, previousVolume, suggestionFor, type TrackerAction } from "../tracker-state";
 import type { PreviousPerformance, TrackerExercise } from "../types";
 import { SetRow } from "./set-row";
@@ -46,6 +49,24 @@ export const ExerciseCard = memo(function ExerciseCard({
   const progress = exerciseProgress(exercise);
   const lastVolume = previousVolume(previous);
   const hasLoggedSets = exercise.sets.some((s) => s.done);
+  const hint = live ? progressionHint(exercise.targets, previous) : null;
+  const hasOpenRows = exercise.sets.some((s) => !s.done && !s.isWarmup);
+  const hintApplied =
+    hint !== null &&
+    exercise.sets.filter((s) => !s.done && !s.isWarmup).every((s) => parseWeight(s.weight) === hint.weightKg && s.reps === String(hint.reps));
+
+  function addWarmups() {
+    // Warm up towards what you typed, else the suggestion, else last time's top weight.
+    const typed = exercise.sets.find((s) => !s.isWarmup && parseWeight(s.weight));
+    const lastTop = previous ? Math.max(0, ...previous.sets.filter((s) => !s.isWarmup).map((s) => s.weightKg)) : 0;
+    const target = (typed && parseWeight(typed.weight)) || hint?.weightKg || lastTop;
+    const sets = warmupSets(target);
+    if (!sets.length) {
+      toast("Enter your working weight first, then add warm-ups.");
+      return;
+    }
+    dispatch({ type: "addWarmups", exerciseId: exercise.id, sets: sets.map((w) => ({ id: newId(), ...w })) });
+  }
   let workingIndex = 0;
 
   return (
@@ -55,7 +76,7 @@ export const ExerciseCard = memo(function ExerciseCard({
           <h3 id={`ex-${exercise.id}`} className="truncate text-base font-semibold">
             {exercise.name}
           </h3>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {exercise.targets
               ? `Target ${exercise.targets.sets} × ${exercise.targets.repsMin === exercise.targets.repsMax ? exercise.targets.repsMin : `${exercise.targets.repsMin}–${exercise.targets.repsMax}`} · `
               : ""}
@@ -80,6 +101,11 @@ export const ExerciseCard = memo(function ExerciseCard({
             <DropdownMenuItem onSelect={() => dispatch({ type: "toggleRpe", exerciseId: exercise.id })}>
               <Gauge aria-hidden /> {exercise.showRpe ? "Hide RPE" : "Log RPE"}
             </DropdownMenuItem>
+            {live ? (
+              <DropdownMenuItem disabled={exercise.sets.some((s) => s.isWarmup)} onSelect={addWarmups}>
+                <Flame aria-hidden /> Add warm-up sets
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onSelect={() => setEditingSets((v) => !v)}>
               <ListX aria-hidden /> {editingSets ? "Stop removing sets" : "Remove sets"}
             </DropdownMenuItem>
@@ -125,6 +151,26 @@ export const ExerciseCard = memo(function ExerciseCard({
       ) : (
         <p className="mx-4 mb-2 text-xs text-muted-foreground">First time logging this exercise.</p>
       )}
+
+      {hint && hasOpenRows ? (
+        <div className="mx-4 mb-2 flex items-center gap-3 rounded-lg border border-primary/30 bg-accent/50 px-2.5 py-2">
+          <TrendingUp className="size-4 shrink-0 text-primary" aria-hidden />
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            <span className="block font-semibold text-foreground">
+              {hint.kind === "increase" ? "Try" : "Aim for"} {hint.weightKg} kg × {hint.reps}
+            </span>
+            {hint.reason}
+          </p>
+          <Button
+            variant="outline"
+            className="h-11 shrink-0 rounded-lg px-3"
+            disabled={hintApplied}
+            onClick={() => dispatch({ type: "applyHint", exerciseId: exercise.id, weightKg: hint.weightKg, reps: hint.reps })}
+          >
+            {hintApplied ? "Applied" : "Use"}
+          </Button>
+        </div>
+      ) : null}
 
       {exercise.showNotes ? (
         <div className="mx-4 mb-2">

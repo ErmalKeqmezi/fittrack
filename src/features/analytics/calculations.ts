@@ -303,3 +303,46 @@ export function summarizeExercise(points: ExerciseSessionStats[]): ExerciseRange
       comparable && first.bestE1rmKg !== null && last.bestE1rmKg !== null ? round2(last.bestE1rmKg - first.bestE1rmKg) : null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Muscle group volume
+// ---------------------------------------------------------------------------
+
+export type MuscleInfo = { id: number; name: string };
+export type ExerciseMuscles = { primary: MuscleInfo; secondary: MuscleInfo[] };
+
+/** A secondary muscle counts as half a set, a common convention for indirect work. */
+export const SECONDARY_SET_WEIGHT = 0.5;
+
+export type MuscleVolume = { id: number; name: string; sets: number; setsPerWeek: number };
+
+/** Working sets per muscle group, most trained first. Exercises without muscle data are skipped. */
+export function muscleGroupVolume(
+  logged: { exerciseId: string; workingSets: number }[],
+  muscles: Map<string, ExerciseMuscles>,
+  weeks: number,
+): MuscleVolume[] {
+  const totals = new Map<number, { name: string; sets: number }>();
+  const add = (muscle: MuscleInfo, sets: number) => {
+    const entry = totals.get(muscle.id) ?? { name: muscle.name, sets: 0 };
+    entry.sets += sets;
+    totals.set(muscle.id, entry);
+  };
+  for (const { exerciseId, workingSets } of logged) {
+    const info = muscles.get(exerciseId);
+    if (!info) continue;
+    add(info.primary, workingSets);
+    for (const secondary of info.secondary) add(secondary, workingSets * SECONDARY_SET_WEIGHT);
+  }
+  const divisor = Math.max(weeks, 1);
+  return [...totals]
+    .map(([id, { name, sets }]) => ({ id, name, sets, setsPerWeek: Math.round((sets / divisor) * 10) / 10 }))
+    .sort((a, b) => b.sets - a.sets || a.name.localeCompare(b.name));
+}
+
+/** Length of a period in weeks: the range, or from the first workout for all time. */
+export function periodWeeks(from: DateKey | null, firstActivity: DateKey | null, today: DateKey) {
+  const start = from ?? firstActivity;
+  if (!start) return 1;
+  return Math.max((daysBetween(start, today) + 1) / 7, 1);
+}

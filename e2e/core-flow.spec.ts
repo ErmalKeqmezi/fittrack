@@ -8,6 +8,23 @@ let page: Page;
 
 test.beforeAll(async ({ browser }) => {
   page = await browser.newPage();
+  // Count sound and keep-awake calls, which leave no trace on screen.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __spy: { oscillators: number; wakeLocks: number } };
+    w.__spy = { oscillators: 0, wakeLocks: 0 };
+    const createOscillator = BaseAudioContext.prototype.createOscillator;
+    BaseAudioContext.prototype.createOscillator = function () {
+      w.__spy.oscillators += 1;
+      return createOscillator.call(this);
+    };
+    if ("WakeLock" in window) {
+      const request = WakeLock.prototype.request;
+      WakeLock.prototype.request = function (type) {
+        w.__spy.wakeLocks += 1;
+        return request.call(this, type);
+      };
+    }
+  });
 });
 
 test.afterAll(async () => {
@@ -128,6 +145,108 @@ test("a plan template becomes today's workout when activated", async () => {
   await expect(page.getByRole("heading", { name: "Today's workout" })).toBeVisible();
 });
 
+async function startPlannedDay() {
+  await page.goto("/workout");
+  // Any Push day from the active template, whatever today's weekday is.
+  await page.getByRole("listitem").filter({ hasText: /^Push/ }).first().getByRole("button", { name: "Start" }).click();
+  await expect(page).toHaveURL(/\/workouts\//);
+  await expect(page.getByRole("heading", { name: "Barbell Bench Press" })).toBeVisible();
+}
+
+test("suggests repeating, then adding weight once every set reaches the top of the range", async () => {
+  // Last time: one set of 75 × 8. The template asks for 4 × 6–8, so sets are missing.
+  await startPlannedDay();
+  await expect(page.getByText("Aim for 75 kg × 8")).toBeVisible();
+  await page.getByRole("button", { name: "Use", exact: true }).first().click();
+  const table = page.getByRole("table", { name: "Barbell Bench Press sets" });
+  await expect(table.getByLabel("Weight in kg").nth(3)).toHaveValue("75");
+  await expect(table.getByLabel("Repetitions").nth(3)).toHaveValue("8");
+
+  for (let i = 0; i < 4; i++) {
+    await table.getByRole("row").nth(i + 1).getByRole("button", { name: "Mark set as completed" }).click();
+  }
+  await page.getByRole("button", { name: "Skip rest" }).click();
+  await finishWorkout();
+
+  // Now all 4 sets reached 8 reps, so the next session suggests more weight.
+  await startPlannedDay();
+  await expect(page.getByText("Try 77.5 kg × 6")).toBeVisible();
+});
+
+test("generates warm-up sets from the suggested weight", async () => {
+  await page.getByRole("button", { name: "Options for Barbell Bench Press" }).click();
+  await page.getByRole("menuitem", { name: "Add warm-up sets" }).click();
+  const table = page.getByRole("table", { name: "Barbell Bench Press sets" });
+  await expect(table.getByRole("button", { name: /^Warm-up set/ })).toHaveCount(3);
+  // 50%, 70% and 85% of 77.5 kg, rounded down to 2.5 kg.
+  await expect(table.getByLabel("Weight in kg").nth(0)).toHaveValue("37.5");
+  await expect(table.getByLabel("Weight in kg").nth(1)).toHaveValue("52.5");
+  await expect(table.getByLabel("Weight in kg").nth(2)).toHaveValue("65");
+  await expect(table.getByLabel("Repetitions").nth(0)).toHaveValue("8");
+
+  await page.getByRole("button", { name: "Discard workout" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Discard workout" }).click();
+  await expect(page).toHaveURL(/\/workout$/);
+});
+
+test("the rest timer keeps the screen on and plays a sound when it ends", async () => {
+  await page.goto("/workout");
+  await page.getByRole("button", { name: "Start empty workout" }).click();
+  await addExercise("Cable Crunch");
+  await logSet("Cable Crunch", 0, "30", "12");
+  await expect(page.getByRole("timer")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __spy: { wakeLocks: number } }).__spy.wakeLocks)).toBeGreaterThan(0);
+
+  // 90 s default, down to 15 s.
+  for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "15 seconds less" }).click();
+  await expect(page.getByText("Rest over. Time for the next set.")).toBeVisible({ timeout: 25_000 });
+  expect(await page.evaluate(() => (window as unknown as { __spy: { oscillators: number } }).__spy.oscillators)).toBe(3);
+
+  await page.getByRole("button", { name: "Discard workout" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Discard workout" }).click();
+  await expect(page).toHaveURL(/\/workout$/);
+});
+
+test("rest alert preferences persist in settings", async () => {
+  await page.goto("/settings");
+  const sound = page.getByRole("checkbox", { name: "Sound when rest ends" });
+  await expect(sound).toBeChecked();
+  await sound.uncheck();
+  await page.reload();
+  await expect(page.getByRole("checkbox", { name: "Sound when rest ends" })).not.toBeChecked();
+  await page.getByRole("checkbox", { name: "Sound when rest ends" }).check();
+});
+
+test("shows sets per muscle group", async () => {
+  await page.goto("/progress?range=30d");
+  const panel = page.locator("section").filter({ has: page.getByRole("heading", { name: "Sets per muscle group" }) });
+  await expect(panel.getByRole("listitem").filter({ hasText: "Chest" })).toBeVisible();
+  await expect(panel.getByText("Not trained:")).toBeVisible();
+});
+
+test("exports workouts as CSV and a full JSON backup", async () => {
+  const csv = await page.request.get("/api/export?format=csv");
+  expect(csv.ok()).toBe(true);
+  expect(csv.headers()["content-type"]).toContain("text/csv");
+  expect(csv.headers()["content-disposition"]).toMatch(/attachment; filename="fittrack-workouts-\d{4}-\d{2}-\d{2}\.csv"/);
+  expect(csv.headers()["cache-control"]).toContain("no-store");
+  const text = await csv.text();
+  expect(text).toContain("date,started_at,workout,duration_minutes,exercise,set,type,weight_kg,reps,rpe,volume_kg");
+  expect(text).toMatch(/Barbell Bench Press,1,working,75,8,,600/);
+  expect(text).not.toContain("Cable Crunch"); // discarded workouts are not exported
+
+  const json = await page.request.get("/api/export?format=json");
+  expect(json.ok()).toBe(true);
+  const backup = await json.json();
+  expect(backup).toMatchObject({ app: "FitTrack", format_version: 1 });
+  expect(backup.tables.workout_sessions.length).toBeGreaterThanOrEqual(3);
+  expect(backup.tables.exercise_sets.length).toBeGreaterThanOrEqual(7);
+  expect(backup.tables.workout_plans).toHaveLength(1);
+  expect(backup.tables.personal_records.length).toBeGreaterThan(0);
+
+  expect((await page.request.get("/api/export?format=xml")).status()).toBe(400);
+});
+
 test("is installable: manifest and icons are served", async () => {
   const response = await page.request.get("/manifest.webmanifest");
   expect(response.ok()).toBe(true);
@@ -191,4 +310,9 @@ test("signing out protects the app again", async () => {
     return name ? (await (await caches.open(name)).keys()).map((r) => new URL(r.url).pathname) : [];
   });
   expect(cached.filter((path) => path !== "/login")).toEqual([]);
+
+  // Exports are not reachable once signed out.
+  const blocked = await page.request.get("/api/export?format=json", { maxRedirects: 0 });
+  expect(blocked.ok()).toBe(false);
+  expect((await blocked.text()).includes("exercise_sets")).toBe(false);
 });

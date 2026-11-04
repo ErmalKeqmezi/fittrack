@@ -30,6 +30,8 @@ export type TrackerAction =
   | { type: "updateSet"; exerciseId: string; setId: string; field: "weight" | "reps" | "rpe"; value: string }
   | { type: "toggleWarmup"; exerciseId: string; setId: string }
   | { type: "toggleDone"; exerciseId: string; setId: string; suggestion?: { weight: number; reps: number } | null; now: number }
+  | { type: "applyHint"; exerciseId: string; weightKg: number; reps: number }
+  | { type: "addWarmups"; exerciseId: string; sets: { id: string; weightKg: number; reps: number }[] }
   | { type: "adjustRest"; seconds: number; now: number }
   | { type: "stopRest" }
   | { type: "replace"; state: TrackerState };
@@ -146,6 +148,26 @@ export function trackerReducer(state: TrackerState, action: TrackerAction): Trac
         restTimer: { endsAt: action.now + exercise.restSeconds * 1000, totalSeconds: exercise.restSeconds, label: exercise.name },
       };
     }
+    case "applyHint":
+      return mapExercise(state, action.exerciseId, (e) => ({
+        ...e,
+        sets: e.sets.map((s) =>
+          s.done || s.isWarmup ? s : { ...s, weight: formatWeightInput(action.weightKg), reps: String(action.reps) },
+        ),
+      }));
+    case "addWarmups":
+      return mapExercise(state, action.exerciseId, (e) => {
+        const room = MAX_SETS_PER_EXERCISE - e.sets.length;
+        const warmups: TrackerSet[] = action.sets.slice(0, Math.max(room, 0)).map((w) => ({
+          id: w.id,
+          weight: formatWeightInput(w.weightKg),
+          reps: String(w.reps),
+          rpe: "",
+          isWarmup: true,
+          done: false,
+        }));
+        return { ...e, sets: [...warmups, ...e.sets] };
+      });
     case "adjustRest": {
       if (!state.restTimer) return state;
       const endsAt = state.restTimer.endsAt + action.seconds * 1000;

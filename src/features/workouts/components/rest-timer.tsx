@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 
+import { fireRestAlert, unlockRestAudio } from "../rest-alert";
 import type { RestTimer as RestTimerState } from "../types";
 
 function format(seconds: number) {
@@ -25,6 +27,13 @@ export function RestTimer({
 }) {
   const [now, setNow] = useState(() => Date.now());
   const notifiedFor = useRef<number | null>(null);
+  useWakeLock(timer !== null);
+
+  // Browsers only allow sound after a tap, so get it ready on any tap in the tracker.
+  useEffect(() => {
+    document.addEventListener("pointerdown", unlockRestAudio, { passive: true });
+    return () => document.removeEventListener("pointerdown", unlockRestAudio);
+  }, []);
 
   useEffect(() => {
     if (!timer) return;
@@ -37,11 +46,7 @@ export function RestTimer({
   useEffect(() => {
     if (!timer || remaining > 0 || notifiedFor.current === timer.endsAt) return;
     notifiedFor.current = timer.endsAt;
-    try {
-      navigator.vibrate?.([200, 100, 200]);
-    } catch {
-      // Vibration is optional.
-    }
+    fireRestAlert(timer.label);
     toast("Rest over. Time for the next set.", { duration: 4000 });
     onStop();
   }, [timer, remaining, onStop]);

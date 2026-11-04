@@ -2,18 +2,22 @@ import "server-only";
 
 import type { CurrentUser } from "@/features/auth/queries";
 import type { BodyRegion } from "@/features/exercises/constants";
+import { listExercises, listMuscleGroups } from "@/features/exercises/queries";
 import { addDays, toDateKey } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
 import {
   inPeriod,
   monthlyBuckets,
+  muscleGroupVolume,
   percentChange,
   periodTotals,
+  periodWeeks,
   previousPeriod,
   rangeStart,
   summarizeExercise,
   weeklyBuckets,
+  type ExerciseMuscles,
   type ExerciseSessionStats,
   type Range,
   type SessionSummary,
@@ -103,10 +107,12 @@ export async function getProgressOverview(user: CurrentUser, range: Range) {
   const lower = queryFrom(from);
   if (lower) bestsQuery = bestsQuery.gte("started_at", lower);
 
-  const [sessions, bestsRes, recordsRes] = await Promise.all([
+  const [sessions, bestsRes, recordsRes, library, muscleGroups] = await Promise.all([
     loadSessions(),
     bestsQuery,
     supabase.from("personal_records").select("id", { count: "exact", head: true }),
+    listExercises(),
+    listMuscleGroups(),
   ]);
   if (bestsRes.error) fail("exercise progress", bestsRes.error.message);
   if (recordsRes.error) fail("personal records", recordsRes.error.message);
@@ -116,13 +122,22 @@ export async function getProgressOverview(user: CurrentUser, range: Range) {
   const totals = periodTotals(current);
   const previousTotals = before ? periodTotals(before) : null;
 
+  const muscleMap = new Map<string, ExerciseMuscles>(
+    library.map((e) => [e.id, { primary: e.primaryMuscle, secondary: e.secondaryMuscles }]),
+  );
+  const firstActivity = sessions[0] ? toDateKey(sessions[0].startedAt, timeZone) : null;
+  const logged: { exerciseId: string; workingSets: number }[] = [];
+
   const byExercise = new Map<string, { name: string; points: ExerciseSessionStats[] }>();
   for (const row of bestsRes.data as BestRow[]) {
     if (!row.exercise_id || !row.started_at || !inPeriod(row.started_at, timeZone, from, today)) continue;
     const entry = byExercise.get(row.exercise_id) ?? { name: row.exercise_name ?? "Exercise", points: [] };
     entry.points.push(toStats(row));
     byExercise.set(row.exercise_id, entry);
+    logged.push({ exerciseId: row.exercise_id, workingSets: row.working_set_count ?? 0 });
   }
+  const muscleVolume = muscleGroupVolume(logged, muscleMap, periodWeeks(from, firstActivity, today));
+  const trainedIds = new Set(muscleVolume.map((m) => m.id));
   const exercises = [...byExercise]
     .map(([id, { name, points }]) => ({ id, name, lastAt: points.at(-1)!.startedAt, ...summarizeExercise(points) }))
     .sort((a, b) => b.sessions - a.sessions || b.lastAt.localeCompare(a.lastAt));
@@ -142,6 +157,8 @@ export async function getProgressOverview(user: CurrentUser, range: Range) {
     weekly: weeklyBuckets(sessions, today, timeZone, 12),
     monthly: monthlyBuckets(sessions, today, timeZone, 12),
     exercises,
+    muscleVolume,
+    untrainedMuscles: muscleGroups.filter((m) => !trainedIds.has(m.id)).map((m) => m.name),
     personalRecords: recordsRes.count ?? 0,
     hasAnyWorkouts: sessions.length > 0,
   };

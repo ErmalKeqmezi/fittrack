@@ -1,4 +1,4 @@
-import { ShieldCheck, UserRound } from "lucide-react";
+import { Database, ShieldCheck, Timer, UserRound } from "lucide-react";
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -6,6 +6,7 @@ import { Panel, PanelHeader } from "@/components/panel";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { requireUser } from "@/features/auth/queries";
 import { ProfileForm } from "@/features/profile/components/profile-form";
+import { RestAlertSettings } from "@/features/workouts/components/rest-alert-settings";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -28,6 +29,35 @@ export default async function SettingsPage() {
       <Panel>
         <PanelHeader title="Profile" icon={UserRound} />
         <ProfileForm displayName={user.displayName} timeZone={user.timeZone} timeZones={timeZoneOptions(user.timeZone)} />
+      </Panel>
+
+      <Panel>
+        <PanelHeader title="Rest timer" description="Saved on this device" icon={Timer} />
+        <RestAlertSettings />
+      </Panel>
+
+      <Panel>
+        <PanelHeader title="Your data" description="Download a copy of everything you've logged" icon={Database} />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <a
+            href="/api/export?format=csv"
+            download
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-border text-sm font-medium transition-colors hover:bg-secondary active:bg-secondary"
+          >
+            Workouts spreadsheet (CSV)
+          </a>
+          <a
+            href="/api/export?format=json"
+            download
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-border text-sm font-medium transition-colors hover:bg-secondary active:bg-secondary"
+          >
+            Full backup (JSON)
+          </a>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          CSV has one row per completed set and opens in Excel or Google Sheets. JSON also includes your plans, custom
+          exercises and personal records. Store these files somewhere private.
+        </p>
       </Panel>
 
       <Panel>

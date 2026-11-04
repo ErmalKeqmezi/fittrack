@@ -6,7 +6,7 @@
  *   connection. The tracker then restores your latest sets from its
  *   on-device draft.
  * - Otherwise an offline page is shown.
- * - Never touches Supabase or Server Action (POST) requests.
+ * - Never touches Supabase, Server Action (POST) or /api requests.
  * - Caches are deleted on sign-out (see SignOutButton).
  */
 
@@ -39,6 +39,17 @@ self.addEventListener("message", (event) => {
   if (event.data === "fittrack:clear-caches") {
     event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith("fittrack-")).map((k) => caches.delete(k)))));
   }
+});
+
+// Tapping the "Rest over" notification returns to the open workout.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      const open = windows[0];
+      return open ? open.focus() : self.clients.openWindow("/workout");
+    }),
+  );
 });
 
 function isStaticAsset(url) {
@@ -81,6 +92,8 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // Exports contain private data and must never be cached.
+  if (url.pathname.startsWith("/api/")) return;
 
   if (isStaticAsset(url)) {
     event.respondWith(cacheFirst(request));
