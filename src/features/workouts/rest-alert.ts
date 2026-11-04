@@ -5,11 +5,13 @@
  * live in localStorage rather than the database.
  */
 
+import { DEFAULT_REST_TONE, isRestTone, REST_TONE_NOTES, type RestTone } from "./rest-tones";
+
 const STORAGE_KEY = "fittrack:rest-alert";
 
-export type RestAlertPrefs = { sound: boolean; notify: boolean };
+export type RestAlertPrefs = { sound: boolean; notify: boolean; tone: RestTone };
 
-export const DEFAULT_PREFS: RestAlertPrefs = { sound: true, notify: false };
+export const DEFAULT_PREFS: RestAlertPrefs = { sound: true, notify: false, tone: DEFAULT_REST_TONE };
 
 const listeners = new Set<() => void>();
 let cachedRaw: string | null | undefined;
@@ -27,7 +29,9 @@ export function getRestAlertPrefs(): RestAlertPrefs {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw !== cachedRaw) {
       cachedRaw = raw;
-      cachedPrefs = raw ? { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<RestAlertPrefs>) } : DEFAULT_PREFS;
+      const saved = raw ? { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Partial<RestAlertPrefs>) } : DEFAULT_PREFS;
+      // A tone removed in a later version falls back to the default.
+      cachedPrefs = isRestTone(saved.tone) ? saved : { ...saved, tone: DEFAULT_REST_TONE };
     }
   } catch {
     cachedPrefs = DEFAULT_PREFS;
@@ -58,23 +62,34 @@ export function unlockRestAudio() {
   }
 }
 
-export function playRestSound() {
+let playing: OscillatorNode[] = [];
+
+/** Plays a tone, cutting off any tone still sounding so previews don't overlap. */
+export function playRestSound(tone: RestTone = getRestAlertPrefs().tone) {
   if (!audio) unlockRestAudio();
   if (!audio) return;
-  const start = audio.currentTime + 0.02;
-  for (let i = 0; i < 3; i++) {
-    const at = start + i * 0.28;
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.value = i === 2 ? 1175 : 880;
-    gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(0.6, at + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
-    oscillator.connect(gain).connect(audio.destination);
-    oscillator.start(at);
-    oscillator.stop(at + 0.24);
+  for (const oscillator of playing) {
+    try {
+      oscillator.stop();
+    } catch {
+      // Already finished.
+    }
   }
+  const start = audio.currentTime + 0.02;
+  playing = REST_TONE_NOTES[tone].map((note) => {
+    const at = start + note.at;
+    const oscillator = audio!.createOscillator();
+    const gain = audio!.createGain();
+    oscillator.type = note.wave;
+    oscillator.frequency.value = note.frequency;
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(note.gain, at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + note.duration);
+    oscillator.connect(gain).connect(audio!.destination);
+    oscillator.start(at);
+    oscillator.stop(at + note.duration + 0.02);
+    return oscillator;
+  });
 }
 
 // --- Notification ------------------------------------------------------------

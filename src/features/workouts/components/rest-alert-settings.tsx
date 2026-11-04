@@ -1,9 +1,9 @@
 "use client";
 
-import { Bell, Volume2 } from "lucide-react";
+import { Bell, Check, Volume2 } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import {
   DEFAULT_PREFS,
@@ -15,10 +15,17 @@ import {
   subscribeRestAlertPrefs,
   unlockRestAudio,
 } from "../rest-alert";
+import { REST_TONE_LABELS, REST_TONES, type RestTone } from "../rest-tones";
 
 export function RestAlertSettings() {
   const prefs = useSyncExternalStore(subscribeRestAlertPrefs, getRestAlertPrefs, () => DEFAULT_PREFS);
   const [message, setMessage] = useState<string | null>(null);
+
+  function chooseTone(tone: RestTone) {
+    setRestAlertPrefs({ tone });
+    unlockRestAudio();
+    playRestSound(tone);
+  }
 
   async function toggleNotifications(enabled: boolean) {
     setMessage(null);
@@ -49,20 +56,31 @@ export function RestAlertSettings() {
           className="size-5 accent-primary"
         />
         <Volume2 className="size-4 text-muted-foreground" aria-hidden />
-        <span className="min-w-0 flex-1 text-sm font-medium">Sound when rest ends</span>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 rounded-xl px-3"
-          onClick={(e) => {
-            e.preventDefault();
-            unlockRestAudio();
-            playRestSound();
-          }}
-        >
-          Test
-        </Button>
+        <span className="text-sm font-medium">Sound when rest ends</span>
       </label>
+      {prefs.sound ? (
+        <div role="radiogroup" aria-label="Rest timer sound" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {REST_TONES.map((tone) => (
+            <button
+              key={tone}
+              type="button"
+              role="radio"
+              aria-checked={prefs.tone === tone}
+              onClick={() => chooseTone(tone)}
+              className={cn(
+                "flex h-11 items-center justify-center gap-1.5 rounded-xl border text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                prefs.tone === tone
+                  ? "border-primary bg-accent text-accent-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground active:bg-secondary",
+              )}
+            >
+              {prefs.tone === tone ? <Check className="size-4 text-primary" aria-hidden /> : null}
+              {REST_TONE_LABELS[tone]}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {prefs.sound ? <p className="text-xs text-muted-foreground">Tap a sound to hear it. It&apos;s saved right away.</p> : null}
       <label className="flex min-h-11 cursor-pointer items-center gap-3">
         <input
           type="checkbox"

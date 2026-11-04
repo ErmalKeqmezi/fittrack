@@ -215,6 +215,15 @@ test("rest alert preferences persist in settings", async () => {
   await page.reload();
   await expect(page.getByRole("checkbox", { name: "Sound when rest ends" })).not.toBeChecked();
   await page.getByRole("checkbox", { name: "Sound when rest ends" }).check();
+
+  // Choosing a sound plays a preview and is remembered.
+  const oscillators = () => page.evaluate(() => (window as unknown as { __spy: { oscillators: number } }).__spy.oscillators);
+  const before = await oscillators();
+  await page.getByRole("radio", { name: "Chime" }).click();
+  expect(await oscillators()).toBe(before + 4);
+  await page.reload();
+  await expect(page.getByRole("radio", { name: "Chime" })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("radio", { name: "Beeps" }).click();
 });
 
 test("shows sets per muscle group", async () => {

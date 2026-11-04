@@ -138,7 +138,7 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
 - **Warm-ups**: *Add warm-up sets* in an exercise's menu adds 50%, 70% and 85% of the weight you
   typed, the suggested weight or last time's top weight, rounded down to 2.5 kg (one set under 30 kg).
 - **Rest timer** starts after each completed working set (plan rest time, else 90 s), with
-  −15/+15/skip. When it ends: sound, vibration and, while the app is in the background, an optional
+  −15/+15/skip. When it ends: your chosen sound (six built-in tones in Settings), vibration and, while the app is in the background, an optional
   notification (Settings). The screen stays on during rest. Browsers pause apps on a locked phone,
   so an alert can arrive late if you lock it yourself; iPhones need the app on the Home Screen for
   notifications, ignore vibration, and mute the sound with the silent switch.
