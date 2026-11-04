@@ -49,7 +49,7 @@ export async function requireUser(): Promise<CurrentUser> {
   return user;
 }
 
-/** True once the owner account exists. Uses a SECURITY DEFINER function that only returns a boolean. */
+/** True once the first account exists, which closes the public setup page. Uses a SECURITY DEFINER function that only returns a boolean. */
 export async function isSetupComplete(): Promise<boolean> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("is_setup_complete");

@@ -63,7 +63,7 @@ export function SetupForm() {
         error={state.fieldErrors?.confirmPassword}
       />
       <SubmitButton pendingLabel="Creating account…" className="mt-2">
-        Create owner account
+        Create account
       </SubmitButton>
     </form>
   );

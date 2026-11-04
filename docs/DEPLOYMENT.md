@@ -50,11 +50,14 @@ Both have free tiers that are enough for one person. Allow about 20 minutes.
 
 1. Open `https://<your-domain>/setup`, create your account and confirm the email.
 2. In Supabase, **Authentication → Sign In / Providers**, turn **off "Allow new users to sign up"**.
-   The database already rejects a second account; this closes the door at the auth layer too.
+   The database allows at most two accounts, so leave this off or a stranger could claim the second one.
 3. Install the app:
    - **iPhone (Safari):** Share → *Add to Home Screen*.
    - **Android (Chrome):** menu → *Install app*.
    - **Desktop (Chrome/Edge):** install icon in the address bar.
+4. **Optional second account:** in Supabase, **Authentication → Users → Add user → Create new user**.
+   Enter the email and a password and tick **Auto Confirm User**. The person signs in at `/login` and
+   sets their name and timezone in Settings. Their data is private to their account.
 
 ## Pre-release checklist
 

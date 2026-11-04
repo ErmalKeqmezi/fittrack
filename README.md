@@ -1,6 +1,6 @@
 # FitTrack
 
-A private, single-user gym journal: log workouts, track strength progression and personal records.
+A private gym journal for up to two people: log workouts, track strength progression and personal records.
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui and Supabase.
 
 > **Status:** all seven phases complete. Installable as a PWA; deployment guide in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
@@ -21,7 +21,7 @@ npm run dev
 ```
 
 Open http://localhost:3000. You are sent to **/login**, which links to **/setup** while no account exists.
-Create your owner account there. Once it exists, registration closes for good.
+Create your account there. Once it exists, the page closes. A second account is created from the Supabase dashboard ([guide](docs/DEPLOYMENT.md)).
 
 ## Scripts
 
@@ -63,7 +63,8 @@ The Supabase secret/service-role key is **never** used by the app.
 
 ## Security model
 
-- **Single account:** a `BEFORE INSERT` trigger on `auth.users` rejects any sign-up once an account exists.
+- **Two accounts at most:** a `BEFORE INSERT` trigger on `auth.users` rejects any account beyond the second.
+  Each account sees only its own data. The public `/setup` page closes after the first account.
   `public.is_setup_complete()` exposes only a boolean, so the UI can show or hide setup.
 - **Row Level Security** on every table. Private rows require `user_id = auth.uid()`. Built-in exercises
   (`user_id IS NULL`) are read-only. Anonymous visitors have no table privileges at all.
@@ -93,6 +94,7 @@ Migrations live in `supabase/migrations/`:
 8. `…_personal_records.sql`: `recompute_personal_records` (current best per exercise and type,
    rebuilt from logged sets), called when a workout is finished, edited or deleted
    (`delete_workout_session`); `finish_workout_session` returns the records a workout beat
+9. `…_two_accounts.sql`: raises the account limit from one to two
 
 ```
 auth.users ─1:1─ profiles
@@ -197,7 +199,7 @@ The Supabase free plan has no automatic backups, so download one regularly. Ther
 | Layer | Command | Covers |
 | --- | --- | --- |
 | Unit (Vitest) | `npm test` | Statistics, dates/timezones, tracker state, progression and warm-ups, muscle volume, CSV export, search/filters, schemas, templates |
-| Database | `npm run test:db` | RLS isolation, single-account guard, constraints, planner, tracking and record functions |
+| Database | `npm run test:db` | RLS isolation between two real accounts, account limit, constraints, planner, tracking and record functions |
 | End-to-end (Playwright) | `npm run test:e2e` | Setup, protected routes, logging a workout, reload safety, last-time hints, PRs, progression hints, warm-ups, rest alerts, muscle volume, exports, progress, plans, offline, sign-out |
 
 ## How statistics are calculated

@@ -51,7 +51,7 @@ export async function setupAccount(_prev: SetupState, formData: FormData): Promi
   };
 
   if (await isSetupComplete()) {
-    return { status: "error", message: "FitTrack already has an owner account. Sign in instead." };
+    return { status: "error", message: "Registration is closed. Sign in instead." };
   }
 
   const parsed = setupSchema.safeParse(raw);
@@ -70,9 +70,9 @@ export async function setupAccount(_prev: SetupState, formData: FormData): Promi
   });
 
   if (error) {
-    // The database trigger rejects any second account; surface that clearly.
-    const message = /already has an owner|database error saving new user/i.test(error.message)
-      ? "FitTrack already has an owner account. Sign in instead."
+    // The database trigger rejects accounts over the limit; surface that clearly.
+    const message = /limit of 2 accounts|database error saving new user/i.test(error.message)
+      ? "Registration is closed. Sign in instead."
       : error.message;
     return { status: "error", message, values };
   }

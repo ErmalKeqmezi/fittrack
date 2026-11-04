@@ -68,7 +68,7 @@ test("first-time setup creates the owner and closes registration", async () => {
   await page.getByLabel("Email").fill(OWNER.email);
   await page.getByLabel("Password", { exact: true }).fill(OWNER.password);
   await page.getByLabel("Confirm password").fill(OWNER.password);
-  await page.getByRole("button", { name: "Create owner account" }).click();
+  await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(OWNER.name);
 
@@ -254,6 +254,40 @@ test("exports workouts as CSV and a full JSON backup", async () => {
   expect(backup.tables.personal_records.length).toBeGreaterThan(0);
 
   expect((await page.request.get("/api/export?format=xml")).status()).toBe(400);
+});
+
+test("a second account gets its own empty, private journal, and a third is refused", async ({ browser }) => {
+  process.loadEnvFile(".env.local");
+  const signUp = (email: string) =>
+    page.request.post(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/signup`, {
+      headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY! },
+      data: { email, password: OWNER.password },
+    });
+  expect((await signUp("e2e-second@fittrack.test")).ok()).toBe(true);
+  expect((await signUp("e2e-third@fittrack.test")).ok()).toBe(false);
+
+  const context = await browser.newContext();
+  const other = await context.newPage();
+  await other.goto("/setup");
+  await expect(other).toHaveURL(/\/login/); // no public registration
+  await other.getByLabel("Email").fill("e2e-second@fittrack.test");
+  await other.getByLabel("Password").fill(OWNER.password);
+  await other.getByRole("button", { name: "Sign in" }).click();
+  await expect(other).toHaveURL(/\/dashboard/);
+
+  await other.goto("/history");
+  await expect(other.getByText("0 completed workouts")).toBeVisible();
+  await other.goto("/plans");
+  await expect(other.getByText("No plans yet")).toBeVisible();
+  await other.goto("/progress/records");
+  await expect(other.getByText("No records yet")).toBeVisible();
+
+  const backup = await (await other.request.get("/api/export?format=json")).json();
+  expect(backup.tables.workout_sessions).toHaveLength(0);
+  expect(backup.tables.workout_plans).toHaveLength(0);
+  expect(backup.tables.personal_records).toHaveLength(0);
+  expect(backup.tables.profiles).toHaveLength(1);
+  await context.close();
 });
 
 test("is installable: manifest and icons are served", async () => {

@@ -23,9 +23,16 @@ const uid = r.data.user?.id;
 r = await anon.rpc("is_setup_complete");
 check("setup complete after first sign-up", r.data === true);
 
+const second = mk();
+r = await second.auth.signUp({ email: "second@fittrack.test", password: "TestPass1234" });
+check("second account is allowed", !r.error && !!r.data.session, r.error?.message);
+const secondId = r.data.user?.id;
+r = await anon.rpc("is_setup_complete");
+check("public setup stays closed with two accounts", r.data === true);
+
 const intruder = mk();
 r = await intruder.auth.signUp({ email: "intruder@fittrack.test", password: "TestPass1234" });
-check("second sign-up is rejected", !!r.error, r.error?.message);
+check("third sign-up is rejected", !!r.error, r.error?.message);
 
 r = await owner.from("profiles").select("*");
 check("profile auto-created", r.data?.length === 1 && r.data[0].display_name === "Test Owner");
@@ -182,6 +189,56 @@ check("cannot finish a workout without sets", r.error?.code === "22023", r.error
 await owner.from("workout_sessions").delete().eq("id", empty);
 r = await anon.rpc("start_workout_session", {});
 check("anon cannot start workouts", !!r.error, r.error?.code);
+
+// Isolation between the two real accounts
+for (const table of ["workout_plans", "workout_days", "plan_exercises", "workout_sessions", "session_exercises", "exercise_sets", "personal_records"]) {
+  r = await second.from(table).select("id");
+  check(`second account sees none of the owner's ${table}`, !r.error && r.data.length === 0, r.error?.message ?? `rows=${r.data.length}`);
+}
+for (const view of ["session_summaries", "exercise_session_bests"]) {
+  r = await second.from(view).select("user_id");
+  check(`second account sees none of the owner's ${view}`, !r.error && r.data.length === 0, r.error?.message);
+}
+r = await second.from("profiles").select("id");
+check("second account sees only its own profile", r.data?.length === 1 && r.data[0].id === secondId, JSON.stringify(r.data));
+r = await second.from("exercises").select("id").not("user_id", "is", null);
+check("second account sees no custom exercises of the owner", r.data?.length === 0, JSON.stringify(r.data));
+r = await second.from("exercises").select("id").is("user_id", null);
+check("second account shares the built-in library", r.data?.length >= 60);
+
+r = await second.from("workout_sessions").update({ name: "Hacked" }).eq("id", s.id).select();
+check("second account cannot edit the owner's workout", !!r.error || r.data.length === 0);
+r = await second.from("workout_sessions").delete().eq("id", s.id).select();
+check("second account cannot delete the owner's workout", !!r.error || r.data.length === 0);
+r = await second.rpc("delete_workout_session", { p_session_id: s.id });
+check("second account cannot delete the owner's workout via RPC", r.error?.code === "P0002", r.error?.code);
+r = await second.rpc("save_workout_session", { p_session_id: s.id, p_name: "Hacked", p_notes: "", p_exercises: [] });
+check("second account cannot overwrite the owner's workout", r.error?.code === "P0002", r.error?.code);
+r = await second.rpc("set_active_plan", { p_plan_id: plan.id, p_active: false });
+check("second account cannot change the owner's plan", r.error?.code === "P0002", r.error?.code);
+r = await second.from("workout_days").insert({ plan_id: plan.id, name: "Injected", position: 99 });
+check("second account cannot add a day to the owner's plan", !!r.error, r.error?.code);
+r = await second.from("exercises").select("id").eq("name", "Landmine Press");
+check("custom exercise names stay private", r.data?.length === 0);
+r = await second.rpc("save_custom_exercise", { p_name: "Landmine Press", p_description: "", p_primary_muscle_group_id: 6, p_secondary_muscle_group_ids: [], p_equipment: "barbell", p_category: "compound" });
+check("both accounts can use the same custom name", !r.error, r.error?.message);
+
+// The second account's own workout and records stay separate
+const ownerRecords = await owner.from("personal_records").select("record_type, value").eq("exercise_id", builtin.id).order("record_type");
+r = await second.rpc("start_workout_session", {});
+check("second account can start while the owner has workouts", !r.error, r.error?.message);
+const secondSession = r.data;
+r = await second.rpc("save_workout_session", { p_session_id: secondSession, p_name: "Mine", p_notes: "", p_exercises: [{ id: uuid(), exercise_id: builtin.id, notes: "", sets: [
+  { id: uuid(), weight_kg: 200, reps: 5, rpe: null, is_warmup: false, is_completed: true },
+] }] });
+r = await second.rpc("finish_workout_session", { p_session_id: secondSession });
+check("second account's first log reports no records", !r.error && r.data.length === 0, r.error?.message);
+r = await second.from("personal_records").select("value").eq("exercise_id", builtin.id).eq("record_type", "max_weight").single();
+check("second account has its own record", Number(r.data?.value) === 200, JSON.stringify(r.data));
+r = await owner.from("personal_records").select("record_type, value").eq("exercise_id", builtin.id).order("record_type");
+check("owner's records are untouched", JSON.stringify(r.data) === JSON.stringify(ownerRecords.data), JSON.stringify(r.data));
+r = await owner.from("workout_sessions").select("id").eq("id", secondSession);
+check("owner cannot see the second account's workout", r.data?.length === 0);
 
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

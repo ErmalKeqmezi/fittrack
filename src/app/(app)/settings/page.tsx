@@ -61,7 +61,7 @@ export default async function SettingsPage() {
       </Panel>
 
       <Panel>
-        <PanelHeader title="Account" icon={ShieldCheck} description="Private owner account" />
+        <PanelHeader title="Account" icon={ShieldCheck} description="Your data is private to this account" />
         <dl className="grid gap-3 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Email</dt>
