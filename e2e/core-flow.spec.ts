@@ -536,7 +536,7 @@ test("rest alerts can be scheduled and cancelled, only for real push services", 
   const scheduled = await page.request.post("/api/rest-alert", { data: { subscription, endsAt: Date.now() + 60_000, label: "Bench" } });
   expect(scheduled.status()).toBe(202);
 
-  const tooLong = await page.request.post("/api/rest-alert", { data: { subscription, endsAt: Date.now() + 600_000, label: "Bench" } });
+  const tooLong = await page.request.post("/api/rest-alert", { data: { subscription, endsAt: Date.now() + 20 * 60_000, label: "Bench" } });
   expect(await tooLong.json()).toEqual({ scheduled: false });
 
   const cancelled = await page.request.delete("/api/rest-alert", { data: { endpoint: subscription.endpoint } });

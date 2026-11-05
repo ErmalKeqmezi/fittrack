@@ -9,7 +9,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui and Supabas
 
 - **Node.js 22.12 or newer** (see `.nvmrc`). Next.js 16 and Vitest do not run on Node 19.
 - **Docker Desktop**, for the local Supabase stack.
-- A Supabase project and a Vercel account, for the hosted deployment ([guide](docs/DEPLOYMENT.md)).
+- A Supabase project and a Netlify account, for the hosted deployment ([guide](docs/DEPLOYMENT.md)).
 
 ## Quick start (local)
 
@@ -42,7 +42,7 @@ Create your account there. Once it exists, the page closes. A second account is 
 
 ## Deployment
 
-See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Supabase project and auth settings, Vercel
+See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Supabase project and auth settings, Netlify
 environment variables, first-run steps (create your account, then disable sign-ups), installing
 the app on your phone, a pre-release checklist, backups and rollback.
 
@@ -159,10 +159,10 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
 - **Sound** plays when a rest ends while FitTrack is open. Audio unlocks on a completed tap, as iOS requires.
   Settings has an option to play through the iPhone's silent switch, which may stop other audio.
 - **Notifications** work in the background and on the lock screen through Web Push, because iOS freezes a web app's
-  own timers. Starting a rest stores a row in `rest_alerts`; `/api/rest-alert` waits until the rest ends and sends the
-  push. Skipping or changing the rest replaces or removes the row, so outdated alerts aren't sent. The row is gone once
+  own timers. Starting a rest stores a row in `rest_alerts`, and `/api/rest-alert` starts a Netlify background function
+  (`netlify/functions/rest-alert.mts`) that waits until the rest ends and sends the push. A normal function stops after 60 seconds. Skipping or changing the rest replaces or removes the row, so outdated alerts aren't sent. The row is gone once
   the alert is sent. No service-role key is needed.
-- **Limits:** rests up to about 4½ minutes, because of the serverless time limit. Notifications use the phone's own
+- **Limits:** rests up to 14 minutes, because background functions stop at 15. Notifications use the phone's own
   sound. On iPhone they need iOS 16.4 or later and FitTrack on the Home Screen.
 
 ## Workout summary

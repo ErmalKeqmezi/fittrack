@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 /**
- * A serverless function can only wait so long (300 s on Vercel's free plan), and
- * it needs a moment to send, so longer rests get no push alert.
+ * A Netlify background function can run for 15 minutes, and it needs a moment to
+ * send, so longer rests get no push alert.
  */
-export const MAX_REST_PUSH_MS = 290_000;
+export const MAX_REST_PUSH_MS = 14 * 60_000;
 
 /** Lets an open app cancel the alert first, so it doesn't notify about what's on screen. */
 export const REST_PUSH_GRACE_MS = 1_000;

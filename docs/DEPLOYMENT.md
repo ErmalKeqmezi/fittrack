@@ -1,6 +1,6 @@
 # Deploying FitTrack
 
-FitTrack runs on **Vercel** (Next.js) with a hosted **Supabase** project (Postgres + Auth).
+FitTrack runs on **Netlify** (Next.js) with a hosted **Supabase** project (Postgres + Auth).
 Both have free tiers that are enough for one person. Allow about 20 minutes.
 
 ## 1. Supabase project
@@ -32,10 +32,10 @@ Both have free tiers that are enough for one person. Allow about 20 minutes.
 6. **Project Settings → API Keys**: copy the **Project URL** and the **publishable key**
    (`sb_publishable_…`). Do **not** copy the secret key; FitTrack never uses it.
 
-## 2. Vercel project
+## 2. Netlify site
 
-1. Import the Git repository in Vercel (framework preset: Next.js). Node.js **22.x**.
-2. Add the environment variables (Production and Preview):
+1. Import the Git repository in Netlify, which detects Next.js. Node.js **22.x**.
+2. Add the environment variables, available to both Builds and Functions:
 
    | Name | Value |
    | --- | --- |
@@ -86,7 +86,7 @@ npm run test:e2e
 
 - Supabase takes daily backups on paid plans. On the free plan, export regularly:
   `npx supabase db dump --data-only -f backup.sql` (requires the database password).
-- Roll back the app from the Vercel dashboard (*Deployments → Promote* an earlier deployment).
+- Roll back the app from the Netlify dashboard (*Deploys*, open an earlier deploy, *Publish deploy*).
   Migrations are additive; if a migration must be undone, write a new migration that reverses it
   rather than editing an applied one.
 

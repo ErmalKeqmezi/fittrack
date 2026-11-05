@@ -118,7 +118,7 @@ export function RestAlertSettings() {
       {message ? <p className="text-sm text-destructive">{message}</p> : null}
       <p className="text-xs text-muted-foreground">
         The screen stays on during rest so the timer keeps running. The chosen sound only plays while FitTrack is open;
-        in the background you get a notification with the phone&apos;s own sound, for rests up to about 4½ minutes. On iPhone,
+        in the background you get a notification with the phone&apos;s own sound, for rests up to 14 minutes. On iPhone,
         notifications need FitTrack on your Home Screen.
       </p>
     </div>
