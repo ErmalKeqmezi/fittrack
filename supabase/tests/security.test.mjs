@@ -262,5 +262,20 @@ check("owner's records are untouched", JSON.stringify(r.data) === JSON.stringify
 r = await owner.from("workout_sessions").select("id").eq("id", secondSession);
 check("owner cannot see the second account's workout", r.data?.length === 0);
 
+// Rest alerts hold a device's push address, so they stay private
+const alert = { endpoint: "https://web.push.apple.com/test", p256dh: "key", auth: "secret", ends_at: new Date(Date.now() + 60_000).toISOString(), label: "Bench" };
+r = await owner.from("rest_alerts").insert(alert).select().single();
+check("owner can schedule a rest alert", !r.error, r.error?.message);
+r = await second.from("rest_alerts").select("endpoint");
+check("second account cannot see the owner's rest alert", r.data?.length === 0);
+r = await second.from("rest_alerts").delete().eq("endpoint", alert.endpoint).select();
+check("second account cannot cancel the owner's rest alert", !!r.error || r.data.length === 0);
+r = await second.from("rest_alerts").insert({ ...alert, user_id: uid });
+check("second account cannot schedule an alert for the owner", !!r.error, r.error?.code);
+r = await anon.from("rest_alerts").select("endpoint");
+check("anonymous visitors cannot read rest alerts", !!r.error || r.data.length === 0);
+r = await owner.from("rest_alerts").delete().eq("endpoint", alert.endpoint).eq("ends_at", alert.ends_at).select();
+check("owner's alert is claimed by its exact end time", r.data?.length === 1, r.error?.message);
+
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

@@ -42,6 +42,8 @@ Both have free tiers that are enough for one person. Allow about 20 minutes.
    | `NEXT_PUBLIC_SUPABASE_URL` | Project URL from step 1.6 |
    | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key from step 1.6 |
    | `NEXT_PUBLIC_SITE_URL` | `https://<your-domain>` (no trailing slash) |
+   | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Optional, for rest notifications: from `npx web-push generate-vapid-keys` |
+   | `VAPID_PRIVATE_KEY` | Optional, the private key from the same command. Keep it secret |
 
 3. Deploy. Optionally add a custom domain, then update `NEXT_PUBLIC_SITE_URL` and the Supabase
    URL configuration to match, and redeploy.

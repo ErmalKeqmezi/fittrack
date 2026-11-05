@@ -101,6 +101,8 @@ test("logs a workout and finds it in history", async () => {
   await expect(page.getByRole("table", { name: "Barbell Bench Press sets" }).getByRole("button", { name: "Completed, tap to undo" })).toHaveCount(2);
 
   await finishWorkout();
+  // Toasts stay clear of the iPhone status bar and Dynamic Island.
+  await expect(page.locator("[data-sonner-toaster]").first()).toHaveAttribute("style", /--mobile-offset-top: calc\(env\(safe-area-inset-top\) \+ 12px\)/);
   await expect(stat("Total volume")).toHaveText("1,260 kg"); // 70×10 + 70×8
   await expect(stat("Completed sets")).toHaveText("2");
   await expect(stat("Total reps")).toHaveText("18");
@@ -524,6 +526,23 @@ test("notes persist, and Repeat Workout starts a new session that compares with 
   await expect(details.getByText("100 kg × 5", { exact: true })).toBeVisible();
 });
 
+test("rest alerts can be scheduled and cancelled, only for real push services", async () => {
+  await page.goto("/settings");
+  const subscription = { endpoint: "https://web.push.apple.com/e2e-test", keys: { p256dh: "key", auth: "secret" } };
+
+  const refused = await page.request.post("/api/rest-alert", { data: { subscription: { ...subscription, endpoint: "https://example.com/hook" }, endsAt: Date.now() + 60_000, label: "" } });
+  expect(refused.status()).toBe(400);
+
+  const scheduled = await page.request.post("/api/rest-alert", { data: { subscription, endsAt: Date.now() + 60_000, label: "Bench" } });
+  expect(scheduled.status()).toBe(202);
+
+  const tooLong = await page.request.post("/api/rest-alert", { data: { subscription, endsAt: Date.now() + 600_000, label: "Bench" } });
+  expect(await tooLong.json()).toEqual({ scheduled: false });
+
+  const cancelled = await page.request.delete("/api/rest-alert", { data: { endpoint: subscription.endpoint } });
+  expect(cancelled.ok()).toBe(true);
+});
+
 test("signing out protects the app again", async () => {
   await page.goto("/settings");
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -536,6 +555,10 @@ test("signing out protects the app again", async () => {
     return name ? (await (await caches.open(name)).keys()).map((r) => new URL(r.url).pathname) : [];
   });
   expect(cached.filter((path) => path !== "/login")).toEqual([]);
+
+  // Rest alerts can't be scheduled either: the request is sent to the login page.
+  const alertBlocked = await page.request.post("/api/rest-alert", { data: {}, maxRedirects: 0 });
+  expect(alertBlocked.ok()).toBe(false);
 
   // Exports are not reachable once signed out.
   const blocked = await page.request.get("/api/export?format=json", { maxRedirects: 0 });

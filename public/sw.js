@@ -41,6 +41,23 @@ self.addEventListener("message", (event) => {
   }
 });
 
+// A rest ended while the app was in the background or the phone was locked.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data?.json() ?? {};
+  } catch {
+    // Not JSON: the default text below still tells you the rest is over.
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title ?? "Rest over", {
+      body: data.body ?? "Time for your next set",
+      tag: "fittrack-rest",
+      icon: "/icons/icon-192.png",
+    }),
+  );
+});
+
 // Tapping the "Rest over" notification returns to the open workout.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

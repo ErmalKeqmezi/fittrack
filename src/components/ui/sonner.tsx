@@ -9,6 +9,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme="dark"
       className="toaster group"
+      // Below the status bar and Dynamic Island in the installed app.
+      offset={{ top: "calc(env(safe-area-inset-top) + 24px)" }}
+      mobileOffset={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
       icons={{
         success: (
           <CircleCheckIcon className="size-4" />

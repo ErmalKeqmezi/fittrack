@@ -9,9 +9,9 @@ import { DEFAULT_REST_TONE, isRestTone, REST_TONE_NOTES, type RestTone } from ".
 
 const STORAGE_KEY = "fittrack:rest-alert";
 
-export type RestAlertPrefs = { sound: boolean; notify: boolean; tone: RestTone };
+export type RestAlertPrefs = { sound: boolean; notify: boolean; tone: RestTone; ignoreSilent: boolean };
 
-export const DEFAULT_PREFS: RestAlertPrefs = { sound: true, notify: false, tone: DEFAULT_REST_TONE };
+export const DEFAULT_PREFS: RestAlertPrefs = { sound: true, notify: false, tone: DEFAULT_REST_TONE, ignoreSilent: false };
 
 const listeners = new Set<() => void>();
 let cachedRaw: string | null | undefined;
@@ -51,15 +51,48 @@ export function setRestAlertPrefs(patch: Partial<RestAlertPrefs>) {
 // --- Sound -------------------------------------------------------------------
 
 let audio: AudioContext | null = null;
+let primed = false;
 
-/** Browsers only allow audio after a tap, so the tracker calls this on every tap. */
+/**
+ * Browsers only allow audio after a tap, so the tracker calls this on every tap.
+ * It must run on a completed tap (touchend or click): iOS doesn't count pointerdown.
+ * iOS also moves the context to "interrupted" after a call or backgrounding.
+ */
 export function unlockRestAudio() {
   try {
     audio ??= new AudioContext();
-    if (audio.state === "suspended") void audio.resume();
+    if (audio.state !== "running") void audio.resume();
+    if (!primed) {
+      // iOS only keeps audio unlocked once something has played during a tap.
+      const silence = audio.createBufferSource();
+      silence.buffer = audio.createBuffer(1, 1, audio.sampleRate);
+      silence.connect(audio.destination);
+      silence.start();
+      primed = true;
+    }
   } catch {
     // No Web Audio: the vibration and on-screen message still apply.
   }
+}
+
+type AudioSessionNavigator = Navigator & { audioSession?: { type: string } };
+
+/** Safari's way to play through the silent switch. Other browsers don't have that switch. */
+export function canIgnoreSilentSwitch() {
+  return typeof navigator !== "undefined" && "audioSession" in navigator;
+}
+
+let sessionTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Takes over the audio for the length of the tone, then hands it back. */
+function ignoreSilentSwitchFor(seconds: number) {
+  const session = (navigator as AudioSessionNavigator).audioSession;
+  if (!session) return;
+  session.type = "playback";
+  if (sessionTimer) clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    session.type = "auto";
+  }, (seconds + 0.5) * 1000);
 }
 
 let playing: OscillatorNode[] = [];
@@ -68,6 +101,10 @@ let playing: OscillatorNode[] = [];
 export function playRestSound(tone: RestTone = getRestAlertPrefs().tone) {
   if (!audio) unlockRestAudio();
   if (!audio) return;
+  if (getRestAlertPrefs().ignoreSilent) {
+    ignoreSilentSwitchFor(Math.max(...REST_TONE_NOTES[tone].map((note) => note.at + note.duration)));
+  }
+  if (audio.state !== "running") void audio.resume();
   for (const oscillator of playing) {
     try {
       oscillator.stop();

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 
 import { fireRestAlert, unlockRestAudio } from "../rest-alert";
+import { cancelRestPush, scheduleRestPush } from "../rest-push";
 import type { RestTimer as RestTimerState } from "../types";
 
 function format(seconds: number) {
@@ -31,9 +32,21 @@ export function RestTimer({
 
   // Browsers only allow sound after a tap, so get it ready on any tap in the tracker.
   useEffect(() => {
-    document.addEventListener("pointerdown", unlockRestAudio, { passive: true });
-    return () => document.removeEventListener("pointerdown", unlockRestAudio);
+    document.addEventListener("touchend", unlockRestAudio, { capture: true, passive: true });
+    document.addEventListener("click", unlockRestAudio, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("touchend", unlockRestAudio, { capture: true });
+      document.removeEventListener("click", unlockRestAudio, { capture: true });
+    };
   }, []);
+
+  // The server alerts the phone if the app is in the background when the rest ends.
+  const endsAt = timer?.endsAt ?? null;
+  const label = timer?.label ?? "";
+  useEffect(() => {
+    if (endsAt === null) cancelRestPush();
+    else if (endsAt > Date.now()) scheduleRestPush(endsAt, label);
+  }, [endsAt, label]);
 
   useEffect(() => {
     if (!timer) return;

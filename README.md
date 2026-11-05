@@ -154,6 +154,17 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   totals, est. 1RM (labelled as an estimate) and a comparison with the previous time each exercise
   was trained. Workouts can be edited (sets, exercises, notes, start time, duration) or deleted.
 
+## Rest alerts
+
+- **Sound** plays when a rest ends while FitTrack is open. Audio unlocks on a completed tap, as iOS requires.
+  Settings has an option to play through the iPhone's silent switch, which may stop other audio.
+- **Notifications** work in the background and on the lock screen through Web Push, because iOS freezes a web app's
+  own timers. Starting a rest stores a row in `rest_alerts`; `/api/rest-alert` waits until the rest ends and sends the
+  push. Skipping or changing the rest replaces or removes the row, so outdated alerts aren't sent. The row is gone once
+  the alert is sent. No service-role key is needed.
+- **Limits:** rests up to about 4½ minutes, because of the serverless time limit. Notifications use the phone's own
+  sound. On iPhone they need iOS 16.4 or later and FitTrack on the Home Screen.
+
 ## Workout summary
 
 Finishing a workout opens its summary (`/workouts/[id]?completed=1`). History shows the same screen and

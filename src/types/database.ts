@@ -207,6 +207,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"rest_alerts": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"ends_at": string,"label": string,"p256dh": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"ends_at": string,"label"?: string,"p256dh": string,"user_id"?: string
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"ends_at"?: string,"label"?: string,"p256dh"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "rest_alerts_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"session_exercises": {
                   Row: {
                     "created_at": string,"exercise_id": string,"exercise_name": string,"id": string,"notes": string | null,"position": number,"session_id": string,"updated_at": string,"user_id": string

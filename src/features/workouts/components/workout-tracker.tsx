@@ -15,6 +15,7 @@ import { formatVolume } from "@/lib/format";
 
 import { discardWorkout, finishWorkout, loadPreviousPerformance, saveWorkoutEdits, type NewRecord } from "../actions";
 import { pickInitialState } from "../drafts";
+import { cancelRestPush } from "../rest-push";
 import {
   exerciseProgress,
   initialSetCount,
@@ -112,6 +113,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
         return;
       }
       sync.discardDraft();
+      cancelRestPush();
       toast.success("Workout finished. Nice work!");
       for (const record of result.records) {
         toast(`New PR · ${record.exerciseName}`, { description: describeRecord(record), duration: 8000, icon: "🏆" });
@@ -144,6 +146,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
     startTransition(async () => {
       await sync.pause();
       sync.discardDraft();
+      cancelRestPush();
       const result = await discardWorkout(state.sessionId).catch(() => ({ ok: false as const, message: "No connection. Try again when online." }));
       if (!result.ok) {
         sync.resume();
