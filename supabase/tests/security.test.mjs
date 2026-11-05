@@ -190,8 +190,30 @@ await owner.from("workout_sessions").delete().eq("id", empty);
 r = await anon.rpc("start_workout_session", {});
 check("anon cannot start workouts", !!r.error, r.error?.code);
 
+// Body measurements
+r = await owner.from("body_measurements").insert({ user_id: uid, measured_on: "2026-11-01", weight_kg: 80, biceps_cm: 38 }).select().single();
+check("owner can log measurements", !r.error, r.error?.message);
+const ownerMeasurement = r.data;
+r = await owner.from("body_measurements").insert({ user_id: uid, measured_on: "2026-11-01", weight_kg: 81 });
+check("one entry per day", r.error?.code === "23505", r.error?.code);
+r = await owner.from("body_measurements").insert({ user_id: uid, measured_on: "2026-11-02" });
+check("an empty entry is rejected", r.error?.code === "23514", r.error?.code);
+r = await owner.from("body_measurements").insert({ user_id: uid, measured_on: "2026-11-03", weight_kg: 5 });
+check("an impossible weight is rejected", r.error?.code === "23514", r.error?.code);
+r = await anon.from("body_measurements").select("id");
+check("anon cannot read measurements", !!r.error || r.data.length === 0, r.error?.code);
+r = await second.from("body_measurements").update({ weight_kg: 50 }).eq("id", ownerMeasurement.id).select();
+check("second account cannot edit the owner's measurements", !!r.error || r.data.length === 0);
+r = await second.from("body_measurements").delete().eq("id", ownerMeasurement.id).select();
+check("second account cannot delete the owner's measurements", !!r.error || r.data.length === 0);
+r = await second.from("body_measurements").insert({ user_id: uid, measured_on: "2026-11-04", weight_kg: 60 });
+check("second account cannot write measurements for the owner", !!r.error, r.error?.code);
+r = await second.from("body_measurements").insert({ measured_on: "2026-11-01", weight_kg: 60 }).select().single();
+check("both accounts can log the same date", !r.error && r.data.user_id === secondId, r.error?.message);
+await second.from("body_measurements").delete().eq("id", r.data?.id);
+
 // Isolation between the two real accounts
-for (const table of ["workout_plans", "workout_days", "plan_exercises", "workout_sessions", "session_exercises", "exercise_sets", "personal_records"]) {
+for (const table of ["body_measurements", "workout_plans", "workout_days", "plan_exercises", "workout_sessions", "session_exercises", "exercise_sets", "personal_records"]) {
   r = await second.from(table).select("id");
   check(`second account sees none of the owner's ${table}`, !r.error && r.data.length === 0, r.error?.message ?? `rows=${r.data.length}`);
 }

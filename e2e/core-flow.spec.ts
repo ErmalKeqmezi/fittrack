@@ -286,8 +286,74 @@ test("a second account gets its own empty, private journal, and a third is refus
   expect(backup.tables.workout_sessions).toHaveLength(0);
   expect(backup.tables.workout_plans).toHaveLength(0);
   expect(backup.tables.personal_records).toHaveLength(0);
+  expect(backup.tables.body_measurements).toHaveLength(0);
   expect(backup.tables.profiles).toHaveLength(1);
+  await other.goto("/body");
+  await expect(other.getByText("No measurements yet")).toBeVisible();
   await context.close();
+});
+
+test("logs body measurements, merges a day, charts and edits them", async () => {
+  await page.goto("/body");
+  await expect(page.getByText("No measurements yet")).toBeVisible();
+
+  const log = async (fields: Record<string, string>, date?: string) => {
+    await page.getByRole("button", { name: "Log measurements" }).click();
+    const dialog = page.getByRole("dialog", { name: "Log measurements" });
+    if (date) await dialog.getByLabel("Date").fill(date);
+    for (const [label, value] of Object.entries(fields)) await dialog.getByLabel(label).fill(value);
+    await dialog.getByRole("button", { name: "Save measurements" }).click();
+    return dialog;
+  };
+  const card = (label: string) => page.locator("dl > div").filter({ has: page.getByText(label, { exact: true }) });
+
+  // Nothing filled in, then an impossible value: refused, and the dialog stays open.
+  let dialog = await log({});
+  await expect(dialog.getByText("Enter at least one measurement.")).toBeVisible();
+  await dialog.getByLabel("Weight (kg)").fill("5");
+  await dialog.getByRole("button", { name: "Save measurements" }).click();
+  await expect(dialog.getByText("Enter 20–500 kg.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Close" }).click();
+
+  // An earlier entry, then today's.
+  dialog = await log({ "Weight (kg)": "85,5", "Biceps (cm)": "37", "Height (cm)": "180" }, "2026-01-15");
+  await expect(dialog).toBeHidden();
+  dialog = await log({ "Weight (kg)": "84" });
+  await expect(dialog).toBeHidden();
+  await expect(card("Weight")).toContainText("84 kg");
+  await expect(card("Weight")).toContainText("−1.5 kg");
+  await expect(card("Height")).toContainText("180 cm");
+
+  // A second log on the same day merges into one entry and keeps the weight.
+  dialog = await log({ "Quads (cm)": "60" });
+  await expect(dialog).toBeHidden();
+  await expect(card("Quads")).toContainText("60 cm");
+  await expect(card("Weight")).toContainText("84 kg");
+  await expect(page.locator("li button").filter({ hasText: /Weight 84 kg · Quads 60 cm/ })).toHaveCount(1);
+
+  // Trend chart for a metric logged on two dates.
+  await expect(page.getByRole("radio", { name: "Weight" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator(".recharts-line-dot, .recharts-dot").first()).toBeVisible();
+
+  // Edit: clearing a field removes it from the entry.
+  await page.locator("li button").filter({ hasText: "Quads 60 cm" }).click();
+  dialog = page.getByRole("dialog", { name: "Edit measurements" });
+  await dialog.getByLabel("Quads (cm)").fill("");
+  await dialog.getByRole("button", { name: "Save measurements" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(card("Quads")).toContainText("Not logged");
+
+  // Included in the backup.
+  const backup = await (await page.request.get("/api/export?format=json")).json();
+  expect(backup.tables.body_measurements).toHaveLength(2);
+
+  // Delete the older entry: the change disappears with it.
+  await page.locator("li button").filter({ hasText: "Height 180 cm" }).click();
+  dialog = page.getByRole("dialog", { name: "Edit measurements" });
+  await dialog.getByRole("button", { name: "Delete entry" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete entry" }).click();
+  await expect(card("Height")).toContainText("Not logged");
+  await expect(card("Weight")).not.toContainText("−1.5 kg");
 });
 
 test("is installable: manifest and icons are served", async () => {

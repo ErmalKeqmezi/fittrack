@@ -56,7 +56,7 @@ export default async function SettingsPage() {
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           CSV has one row per completed set and opens in Excel or Google Sheets. JSON also includes your plans, custom
-          exercises and personal records. Store these files somewhere private.
+          exercises, personal records and body measurements. Store these files somewhere private.
         </p>
       </Panel>
 

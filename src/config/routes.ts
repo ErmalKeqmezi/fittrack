@@ -13,6 +13,7 @@ export const routes = {
   workout: "/workout",
   workouts: "/workouts",
   history: "/history",
+  body: "/body",
   progress: "/progress",
   records: "/progress/records",
 } as const;

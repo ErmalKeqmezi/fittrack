@@ -39,6 +39,7 @@ export async function loadExportTables() {
     sessionExercises,
     exerciseSets,
     personalRecords,
+    bodyMeasurements,
   ] = await Promise.all([
     fetchAll(supabase, "profiles", "id"),
     fetchAll(supabase, "muscle_groups", "id"),
@@ -51,6 +52,7 @@ export async function loadExportTables() {
     fetchAll(supabase, "session_exercises", "id"),
     fetchAll(supabase, "exercise_sets", "id"),
     fetchAll(supabase, "personal_records", "id"),
+    fetchAll(supabase, "body_measurements", "id"),
   ]);
   return {
     profiles,
@@ -64,5 +66,6 @@ export async function loadExportTables() {
     session_exercises: sessionExercises,
     exercise_sets: exerciseSets,
     personal_records: personalRecords,
+    body_measurements: bodyMeasurements,
   };
 }

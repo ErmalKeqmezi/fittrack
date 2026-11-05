@@ -21,12 +21,15 @@ export type ProgressPoint = {
 export function ProgressLineChart({
   data,
   seriesLabel,
+  detailLabel,
   estimated,
   formatValue,
   caption,
 }: {
   data: ProgressPoint[];
   seriesLabel: string;
+  /** Names each point's `detail`; omit when points have no extra detail. */
+  detailLabel?: string;
   estimated: boolean;
   formatValue: (value: number) => string;
   caption: string;
@@ -58,7 +61,7 @@ export function ProgressLineChart({
               axisLine={false}
               domain={values.length ? [Math.max(0, Math.floor(min - pad)), Math.ceil(max + pad)] : [0, 1]}
               tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize }}
-              tickFormatter={(v: number) => formatValue(v).replace(/ kg$/, "")}
+              tickFormatter={(v: number) => formatValue(v).replace(/ ?(kg|cm|%)$/, "")}
             />
             <Tooltip
               cursor={{ stroke: chartTheme.axisText, strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -70,7 +73,7 @@ export function ProgressLineChart({
                     title={point.dateLabel}
                     rows={[
                       { label: seriesLabel, value: formatValue(point.value), swatch: chartTheme.series },
-                      { label: "Top set", value: point.detail },
+                      ...(detailLabel ? [{ label: detailLabel, value: point.detail }] : []),
                     ]}
                   />
                 );
@@ -97,7 +100,7 @@ export function ProgressLineChart({
           <tr>
             <th scope="col">Date</th>
             <th scope="col">{seriesLabel}</th>
-            <th scope="col">Top set</th>
+            {detailLabel ? <th scope="col">{detailLabel}</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -105,7 +108,7 @@ export function ProgressLineChart({
             <tr key={d.key}>
               <th scope="row">{d.dateLabel}</th>
               <td>{d.value === null ? "—" : formatValue(d.value)}</td>
-              <td>{d.detail}</td>
+              {detailLabel ? <td>{d.detail}</td> : null}
             </tr>
           ))}
         </tbody>

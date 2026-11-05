@@ -84,6 +84,7 @@ export function ExerciseProgressChart({ points, timeZone, exerciseName }: { poin
         <ProgressLineChart
           data={data}
           seriesLabel={config.label}
+          detailLabel="Top set"
           estimated={config.estimated}
           formatValue={formatter(metric)}
           caption={`${exerciseName}: ${config.label} per session`}

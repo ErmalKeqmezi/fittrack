@@ -5,7 +5,27 @@ export type Database = {
   
   "public": {
           Tables: {
-            "exercise_secondary_muscles": {
+            "body_measurements": {
+                  Row: {
+                    "biceps_cm": number | null,"body_fat_percent": number | null,"calves_cm": number | null,"chest_cm": number | null,"created_at": string,"forearms_cm": number | null,"height_cm": number | null,"hips_cm": number | null,"id": string,"measured_on": string,"neck_cm": number | null,"quads_cm": number | null,"shoulders_cm": number | null,"updated_at": string,"user_id": string,"waist_cm": number | null,"weight_kg": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "biceps_cm"?: number | null,"body_fat_percent"?: number | null,"calves_cm"?: number | null,"chest_cm"?: number | null,"created_at"?: string,"forearms_cm"?: number | null,"height_cm"?: number | null,"hips_cm"?: number | null,"id"?: string,"measured_on": string,"neck_cm"?: number | null,"quads_cm"?: number | null,"shoulders_cm"?: number | null,"updated_at"?: string,"user_id"?: string,"waist_cm"?: number | null,"weight_kg"?: number | null
+                  }
+                  Update: {
+                    "biceps_cm"?: number | null,"body_fat_percent"?: number | null,"calves_cm"?: number | null,"chest_cm"?: number | null,"created_at"?: string,"forearms_cm"?: number | null,"height_cm"?: number | null,"hips_cm"?: number | null,"id"?: string,"measured_on"?: string,"neck_cm"?: number | null,"quads_cm"?: number | null,"shoulders_cm"?: number | null,"updated_at"?: string,"user_id"?: string,"waist_cm"?: number | null,"weight_kg"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "body_measurements_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"exercise_secondary_muscles": {
                   Row: {
                     "exercise_id": string,"muscle_group_id": number
                   }

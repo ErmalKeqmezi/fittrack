@@ -95,6 +95,7 @@ Migrations live in `supabase/migrations/`:
    rebuilt from logged sets), called when a workout is finished, edited or deleted
    (`delete_workout_session`); `finish_workout_session` returns the records a workout beat
 9. `…_two_accounts.sql`: raises the account limit from one to two
+10. `…_body_measurements.sql`: private dated body measurements
 
 ```
 auth.users ─1:1─ profiles
@@ -153,6 +154,14 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   totals, est. 1RM (labelled as an estimate) and a comparison with the previous time each exercise
   was trained. Workouts can be edited (sets, exercises, notes, start time, duration) or deleted.
 
+## Body measurements
+
+The **Body** tab (`/body`) logs height, weight, body fat and sizes (neck, shoulders, chest, biceps,
+forearms, waist, hips, quads, calves). Every field is optional and there is one entry per day: logging
+twice on a date merges into that entry. It shows each metric's latest value and change since it was
+last logged, a trend chart per metric with range filters, and an editable history. Data is private to
+the account and included in the JSON backup.
+
 ## Progress and personal records
 
 - **Progress** (`/progress`): workouts, volume, working sets and average duration for a range
@@ -177,7 +186,7 @@ Settings → *Your data* downloads your data (`/api/export`, signed-in only, nev
 
 - **CSV:** one row per completed set of completed workouts, for Excel or Google Sheets. Text that a
   spreadsheet would run as a formula is neutralised.
-- **JSON:** a full backup of every table you can access: workouts, plans, custom exercises, records.
+- **JSON:** a full backup of every table you can access: workouts, plans, custom exercises, records, body measurements.
 
 The Supabase free plan has no automatic backups, so download one regularly. There is no import yet.
 
@@ -200,7 +209,7 @@ The Supabase free plan has no automatic backups, so download one regularly. Ther
 | --- | --- | --- |
 | Unit (Vitest) | `npm test` | Statistics, dates/timezones, tracker state, progression and warm-ups, muscle volume, CSV export, search/filters, schemas, templates |
 | Database | `npm run test:db` | RLS isolation between two real accounts, account limit, constraints, planner, tracking and record functions |
-| End-to-end (Playwright) | `npm run test:e2e` | Setup, protected routes, logging a workout, reload safety, last-time hints, PRs, progression hints, warm-ups, rest alerts, muscle volume, exports, progress, plans, offline, sign-out |
+| End-to-end (Playwright) | `npm run test:e2e` | Setup, protected routes, logging a workout, reload safety, last-time hints, PRs, progression hints, warm-ups, rest alerts, muscle volume, body measurements, exports, progress, plans, offline, sign-out |
 
 ## How statistics are calculated
 
@@ -238,7 +247,7 @@ src/
     pwa/               service worker registration, connection status
     brand/             logo
   features/<domain>/   business logic per domain: actions.ts, queries.ts, schemas.ts, components/
-                       (auth, dashboard, analytics, profile, exercises, planner, workouts)
+                       (auth, dashboard, analytics, profile, exercises, planner, workouts, body, export)
   hooks/               client hooks (useFormAction: forms that keep values on errors)
   lib/                 supabase clients, env validation, utilities
   config/              route constants and navigation

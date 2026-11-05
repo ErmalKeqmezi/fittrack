@@ -46,14 +46,14 @@ export function BottomNavLink({ href }: { href: string }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium text-muted-foreground transition-colors",
+        "flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium text-muted-foreground transition-colors",
         "focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
         active && "text-brand-soft",
       )}
     >
       <span
         className={cn(
-          "grid h-8 w-14 place-items-center rounded-full transition-colors",
+          "grid h-8 w-11 place-items-center rounded-full transition-colors",
           active && "bg-accent text-primary",
         )}
       >
