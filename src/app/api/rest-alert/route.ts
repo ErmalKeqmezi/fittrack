@@ -16,8 +16,9 @@ async function startDelivery(job: RestAlertJob) {
     after(() => deliverRestAlert(job));
     return true;
   }
-  const response = await fetch(`${site}/.netlify/functions/rest-alert`, { method: "POST", body: JSON.stringify(job) });
-  return response.ok;
+  // Netlify answers 202 at once. Anything else, such as a redirect, means it didn't start.
+  const response = await fetch(`${site}/.netlify/functions/rest-alert`, { method: "POST", body: JSON.stringify(job), redirect: "manual" });
+  return response.status === 202;
 }
 
 /**

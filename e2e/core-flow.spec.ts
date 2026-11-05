@@ -560,6 +560,10 @@ test("signing out protects the app again", async () => {
   const alertBlocked = await page.request.post("/api/rest-alert", { data: {}, maxRedirects: 0 });
   expect(alertBlocked.ok()).toBe(false);
 
+  // Netlify functions are called without a cookie, so the sign-in check must let them through.
+  const functionCall = await page.request.post("/.netlify/functions/rest-alert", { data: {}, maxRedirects: 0 });
+  expect(functionCall.status()).not.toBe(307);
+
   // Exports are not reachable once signed out.
   const blocked = await page.request.get("/api/export?format=json", { maxRedirects: 0 });
   expect(blocked.ok()).toBe(false);
