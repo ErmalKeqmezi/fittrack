@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/features/auth/queries";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/uuid";
 
-import { getPreviousPerformance } from "./queries";
+import { getInProgressWorkout, getPreviousPerformance, getWorkout } from "./queries";
 import { snapshotSchema } from "./schemas";
 import type { SessionSnapshot } from "./types";
 
@@ -81,9 +81,23 @@ async function persist(snapshot: SessionSnapshot): Promise<SaveResult> {
   return { ok: true, savedAt: data };
 }
 
-/** Autosave: idempotent full snapshot, safe to retry. */
+/** The session's status, or null if it doesn't exist. */
+async function sessionStatus(sessionId: string) {
+  if (!isUuid(sessionId)) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("workout_sessions").select("status").eq("id", sessionId).maybeSingle();
+  if (error) throw error;
+  return data?.status ?? null;
+}
+
+/**
+ * Autosave: idempotent full snapshot, safe to retry. A late save must never
+ * reach a finished workout: saving into a completed session would mark
+ * unfinished rows as completed and bring back dropped exercises.
+ */
 export async function saveWorkout(snapshot: SessionSnapshot): Promise<SaveResult> {
   if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED, retryable: false };
+  if ((await sessionStatus(snapshot.sessionId)) === "completed") return { ok: true, savedAt: new Date().toISOString() };
   return persist(snapshot);
 }
 
@@ -93,6 +107,10 @@ export async function saveWorkout(snapshot: SessionSnapshot): Promise<SaveResult
  */
 export async function finishWorkout(snapshot: SessionSnapshot): Promise<FinishResult> {
   if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED };
+
+  // A retry after a lost response: it already saved, so just open the summary.
+  if ((await sessionStatus(snapshot.sessionId)) === "completed") return { ok: true, records: [] };
+
   const saved = await persist(snapshot);
   if (!saved.ok) return { ok: false, message: saved.message };
 
@@ -160,4 +178,72 @@ export async function loadPreviousPerformance(exerciseIds: string[], before: str
   if (!(await getCurrentUser())) return {};
   if (!exerciseIds.every(isUuid) || !isUuid(excludeSessionId) || Number.isNaN(Date.parse(before))) return {};
   return getPreviousPerformance(exerciseIds.slice(0, 30), before, excludeSessionId);
+}
+
+/** Saves the notes of a workout without touching its sets. */
+export async function saveSessionNotes(sessionId: string, notes: string): Promise<ActionResult> {
+  if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED };
+  if (!isUuid(sessionId)) return { ok: false, message: "Unknown workout." };
+  const trimmed = notes.trim();
+  if (trimmed.length > 2000) return { ok: false, message: "Keep notes under 2,000 characters." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workout_sessions")
+    .update({ notes: trimmed || null })
+    .eq("id", sessionId)
+    .select("id");
+  if (error || !data.length) return { ok: false, message: "Could not save your notes. Try again." };
+
+  revalidatePath(`${routes.workouts}/${sessionId}`, "layout");
+  return { ok: true, message: "Notes saved." };
+}
+
+export type RepeatResult = { ok: true; sessionId: string; resumed: boolean } | { ok: false; message: string };
+
+/**
+ * Starts a new workout like a finished one, through the normal start flow: from
+ * its plan day when that still exists, otherwise with the same exercises. Sets
+ * are logged fresh and the finished workout is not changed. A workout already
+ * in progress is resumed instead, because only one can run at a time.
+ */
+export async function repeatWorkout(sessionId: string): Promise<RepeatResult> {
+  if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED };
+  if (!isUuid(sessionId)) return { ok: false, message: "Unknown workout." };
+
+  const inProgress = await getInProgressWorkout();
+  if (inProgress) return { ok: true, sessionId: inProgress.id, resumed: true };
+
+  const source = await getWorkout(sessionId);
+  if (!source) return { ok: false, message: "This workout no longer exists." };
+
+  const supabase = await createClient();
+  const fromPlan = source.workoutDayId
+    ? await supabase.rpc("start_workout_session", { p_workout_day_id: source.workoutDayId })
+    : null;
+  // The plan day may have become a rest day; fall back to the workout's own exercises.
+  const started = fromPlan && !fromPlan.error ? fromPlan : await supabase.rpc("start_workout_session", {});
+  if (started.error) return { ok: false, message: describe(started.error, "Could not start the workout. Try again.") };
+  const id = started.data;
+
+  const { count, error: countError } = await supabase
+    .from("session_exercises")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", id);
+  if (countError) return { ok: false, message: "Could not start the workout. Try again." };
+
+  if (!count) {
+    const seen = new Set<string>();
+    const exercises = source.state.exercises.filter((e) => !seen.has(e.exerciseId) && seen.add(e.exerciseId));
+    const saved = await persist({
+      sessionId: id,
+      name: source.state.name,
+      notes: "",
+      exercises: exercises.map((e) => ({ id: crypto.randomUUID(), exercise_id: e.exerciseId, notes: "", sets: [] })),
+    });
+    if (!saved.ok) return { ok: false, message: saved.message };
+  }
+
+  revalidateWorkouts();
+  return { ok: true, sessionId: id, resumed: false };
 }

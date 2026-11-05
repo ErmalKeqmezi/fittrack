@@ -154,6 +154,25 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   totals, est. 1RM (labelled as an estimate) and a comparison with the previous time each exercise
   was trained. Workouts can be edited (sets, exercises, notes, start time, duration) or deleted.
 
+## Workout summary
+
+Finishing a workout opens its summary (`/workouts/[id]?completed=1`). History shows the same screen and
+components at `/workouts/[id]`, with Edit and Delete and the exercises expanded.
+
+- **Calculated when read, from saved data** (`features/workouts/summary.ts`, loaded by `getWorkoutSummary`),
+  so nothing extra is stored, refreshing is safe, and later edits are reflected. No migration was needed;
+  notes use `workout_sessions.notes`.
+- **Stats** count completed working sets. Warm-ups are listed but excluded, as everywhere else.
+- **Personal records** compare with everything logged before that workout, in the same way as the finish
+  notification, so a first-ever value isn't called a record. An estimated 1RM is always labelled as an estimate.
+- **Comparison** uses the most recent earlier workout from the same plan day or with the same name. Workouts
+  still called the default "Workout" aren't compared by name, because the name says nothing about their content.
+- **Muscle groups** use the Progress page's convention: main muscles count fully, secondary muscles as half.
+- **Repeat Workout** goes through the normal start flow and leaves the finished workout untouched. A workout
+  already in progress is opened instead.
+- **Finishing is safe to retry.** Autosave stops during a finish, a second tap is ignored, and a retry after a
+  lost response opens the summary without saving over the finished workout.
+
 ## Body measurements
 
 The **Body** tab (`/body`) logs height, weight, body fat and sizes (neck, shoulders, chest, biceps,

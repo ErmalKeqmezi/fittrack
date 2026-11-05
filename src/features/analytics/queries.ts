@@ -223,17 +223,3 @@ export async function listPersonalRecords(): Promise<PersonalRecord[]> {
     exerciseSetId: r.exercise_set_id,
   }));
 }
-
-/** Set ids that currently hold a record, for PR badges on a workout. */
-export async function getRecordSetIds(setIds: string[]): Promise<Map<string, RecordType[]>> {
-  const result = new Map<string, RecordType[]>();
-  if (!setIds.length) return result;
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("personal_records").select("exercise_set_id, record_type").in("exercise_set_id", setIds);
-  if (error) fail("personal records", error.message);
-  for (const r of data) {
-    if (!r.exercise_set_id) continue;
-    result.set(r.exercise_set_id, [...(result.get(r.exercise_set_id) ?? []), r.record_type as RecordType]);
-  }
-  return result;
-}

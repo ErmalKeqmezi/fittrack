@@ -2,7 +2,7 @@
 
 import { Flag, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useReducer, useState, useTransition } from "react";
+import { useCallback, useReducer, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { ConfirmAction } from "@/components/confirm-button";
@@ -14,7 +14,7 @@ import type { Exercise } from "@/features/exercises/types";
 import { formatVolume } from "@/lib/format";
 
 import { discardWorkout, finishWorkout, loadPreviousPerformance, saveWorkoutEdits, type NewRecord } from "../actions";
-import { clearDraft, pickInitialState } from "../drafts";
+import { pickInitialState } from "../drafts";
 import {
   exerciseProgress,
   initialSetCount,
@@ -58,6 +58,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
   const [previous, setPrevious] = useState(initialPrevious);
   const [finishOpen, setFinishOpen] = useState(false);
   const [busy, startTransition] = useTransition();
+  const finishing = useRef(false);
   const live = state.status === "in_progress";
   const sync = useTrackerSync(state, { enabled: live });
 
@@ -98,18 +99,24 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
   );
 
   function finish() {
+    // A second tap can't start a second finish.
+    if (finishing.current) return;
+    finishing.current = true;
     startTransition(async () => {
+      await sync.pause();
       const result = await finishWorkout(toSnapshot(state)).catch(() => ({ ok: false as const, message: "No connection. Your workout is saved on this device; try again when online." }));
       if (!result.ok) {
+        finishing.current = false;
+        sync.resume();
         toast.error(result.message);
         return;
       }
-      clearDraft(state.sessionId);
+      sync.discardDraft();
       toast.success("Workout finished. Nice work!");
       for (const record of result.records) {
         toast(`New PR · ${record.exerciseName}`, { description: describeRecord(record), duration: 8000, icon: "🏆" });
       }
-      router.replace(`${routes.workouts}/${state.sessionId}`);
+      router.replace(`${routes.workouts}/${state.sessionId}?completed=1`);
       router.refresh();
     });
   }
@@ -121,7 +128,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
         toast.error(result.message);
         return;
       }
-      clearDraft(state.sessionId);
+      sync.discardDraft();
       toast.success(result.message ?? "Changes saved.");
       router.replace(`${routes.workouts}/${state.sessionId}`);
       router.refresh();
@@ -129,15 +136,19 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
   }
 
   function cancelEdits() {
-    clearDraft(state.sessionId);
+    sync.discardDraft();
     router.replace(`${routes.workouts}/${state.sessionId}`);
   }
 
   function discard() {
     startTransition(async () => {
-      clearDraft(state.sessionId);
-      const result = await discardWorkout(state.sessionId);
-      if (!result.ok) toast.error(result.message);
+      await sync.pause();
+      sync.discardDraft();
+      const result = await discardWorkout(state.sessionId).catch(() => ({ ok: false as const, message: "No connection. Try again when online." }));
+      if (!result.ok) {
+        sync.resume();
+        toast.error(result.message);
+      }
     });
   }
 

@@ -4,6 +4,10 @@ import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 
+import type { ExerciseMuscles } from "@/features/analytics/calculations";
+import { listExercises } from "@/features/exercises/queries";
+
+import { buildWorkoutSummary, equivalentSessions, type PriorBest, type PriorSession, type WorkoutSummary } from "./summary";
 import { DEFAULT_REST_SECONDS } from "./tracker-state";
 import type { PreviousPerformance, SessionStatus, TrackerState } from "./types";
 
@@ -23,6 +27,7 @@ export const getInProgressWorkout = cache(async (): Promise<InProgressWorkout | 
 export type LoadedWorkout = {
   state: TrackerState;
   planName: string | null;
+  workoutDayId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -106,6 +111,7 @@ export const getWorkout = cache(async (id: string): Promise<LoadedWorkout | null
       restTimer: null,
     },
     planName: data.workout_plans?.name ?? null,
+    workoutDayId: data.workout_day_id,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -174,4 +180,75 @@ export async function listWorkoutHistory(page: number): Promise<{ entries: Histo
       volumeKg: Number(s.volume_kg ?? 0),
     })),
   };
+}
+
+const PAGE_SIZE = 1000;
+
+/** Supabase returns at most 1000 rows per request, so long histories are read in pages. */
+async function readAllPages<T>(
+  readPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await readPage(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(`Could not load the workout summary: ${error.message}`);
+    rows.push(...(data ?? []));
+    if ((data?.length ?? 0) < PAGE_SIZE) return rows;
+  }
+}
+
+/** The summary of a finished workout, calculated from what is saved right now. */
+export async function getWorkoutSummary(workout: LoadedWorkout): Promise<WorkoutSummary> {
+  const { state } = workout;
+  const exerciseIds = [...new Set(state.exercises.map((e) => e.exerciseId))];
+  const supabase = await createClient();
+
+  const [previous, library, bestRows, sessionRows] = await Promise.all([
+    getPreviousPerformance(exerciseIds, state.startedAt, state.sessionId),
+    listExercises(),
+    exerciseIds.length
+      ? readAllPages((from, to) =>
+          supabase
+            .from("exercise_session_bests")
+            .select("session_exercise_id, exercise_id, top_weight_kg, max_reps, best_e1rm_kg")
+            .in("exercise_id", exerciseIds)
+            .lt("started_at", state.startedAt)
+            .order("session_exercise_id")
+            .range(from, to),
+        )
+      : [],
+    readAllPages((from, to) =>
+      supabase
+        .from("session_summaries")
+        .select("id, name, workout_day_id, started_at, volume_kg")
+        .eq("status", "completed")
+        .lt("started_at", state.startedAt)
+        .order("started_at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+  ]);
+
+  const priorBests: PriorBest[] = bestRows.map((row) => ({
+    exerciseId: row.exercise_id ?? "",
+    topWeightKg: Number(row.top_weight_kg ?? 0),
+    maxReps: Number(row.max_reps ?? 0),
+    bestE1rmKg: row.best_e1rm_kg === null ? null : Number(row.best_e1rm_kg),
+  }));
+
+  const priorSessions: PriorSession[] = sessionRows.map((row) => ({
+    id: row.id ?? "",
+    name: row.name ?? "",
+    workoutDayId: row.workout_day_id,
+    startedAt: row.started_at ?? "",
+    volumeKg: Number(row.volume_kg ?? 0),
+  }));
+  const equivalentPrior = equivalentSessions({ name: state.name, workoutDayId: workout.workoutDayId }, priorSessions);
+  const equivalent = equivalentPrior.length ? await getWorkout(equivalentPrior[0].id) : null;
+
+  const muscles = new Map<string, ExerciseMuscles>(
+    library.map((e) => [e.id, { primary: e.primaryMuscle, secondary: e.secondaryMuscles }]),
+  );
+
+  return buildWorkoutSummary({ state, previous, priorBests, equivalentPrior, equivalent: equivalent?.state ?? null, muscles });
 }

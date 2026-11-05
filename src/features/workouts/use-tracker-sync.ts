@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { saveWorkout } from "./actions";
-import { writeDraft } from "./drafts";
+import { clearDraft, writeDraft } from "./drafts";
 import { toSnapshot } from "./tracker-state";
 import type { TrackerState } from "./types";
 
@@ -26,16 +26,19 @@ export function useTrackerSync(state: TrackerState, { enabled }: { enabled: bool
   const lastSavedJson = useRef(JSON.stringify(toSnapshot(state)));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const paused = useRef(false);
+  const draftDiscarded = useRef(false);
 
   const flushDraft = useCallback(() => {
     if (draftTimer.current) clearTimeout(draftTimer.current);
     draftTimer.current = null;
-    writeDraft(latest.current);
+    if (!draftDiscarded.current) writeDraft(latest.current);
   }, []);
   const inFlight = useRef<Promise<boolean> | null>(null);
 
   const save = useCallback(async (): Promise<boolean> => {
     if (inFlight.current) await inFlight.current;
+    if (paused.current) return true;
     const snapshot = toSnapshot(latest.current);
     const json = JSON.stringify(snapshot);
     if (json === lastSavedJson.current) {
@@ -132,5 +135,26 @@ export function useTrackerSync(state: TrackerState, { enabled }: { enabled: bool
     return save();
   }, [save]);
 
-  return { status, message, flush };
+  /** Stops autosaving while the workout is being finished, so no late save follows it. */
+  const pause = useCallback(async () => {
+    paused.current = true;
+    if (timer.current) clearTimeout(timer.current);
+    if (inFlight.current) await inFlight.current;
+  }, []);
+
+  /** Saves again, on the device too, after finishing or discarding failed. */
+  const resume = useCallback(() => {
+    paused.current = false;
+    draftDiscarded.current = false;
+    schedule(0);
+  }, [schedule]);
+
+  /** Removes the on-device draft for good, including the write on leaving the page. */
+  const discardDraft = useCallback(() => {
+    draftDiscarded.current = true;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    clearDraft(latest.current.sessionId);
+  }, []);
+
+  return { status, message, flush, pause, resume, discardDraft };
 }

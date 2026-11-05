@@ -53,8 +53,10 @@ async function addExercise(name: string) {
 async function finishWorkout() {
   await page.getByRole("button", { name: "Finish", exact: true }).click();
   await page.getByRole("dialog", { name: "Finish workout?" }).getByRole("button", { name: "Finish workout" }).click();
-  await expect(page.getByRole("link", { name: "Workout history" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Workout Complete!" })).toBeVisible();
 }
+
+const stat = (label: string) => page.locator(`dt:has-text("${label}") + dd`);
 
 test("signed-out visitors are sent to login", async () => {
   await page.goto("/dashboard");
@@ -99,7 +101,11 @@ test("logs a workout and finds it in history", async () => {
   await expect(page.getByRole("table", { name: "Barbell Bench Press sets" }).getByRole("button", { name: "Completed, tap to undo" })).toHaveCount(2);
 
   await finishWorkout();
-  await expect(page.getByText("1,260 kg", { exact: true })).toBeVisible(); // 70×10 + 70×8 in the summary
+  await expect(stat("Total volume")).toHaveText("1,260 kg"); // 70×10 + 70×8
+  await expect(stat("Completed sets")).toHaveText("2");
+  await expect(stat("Total reps")).toHaveText("18");
+  await expect(page.getByText("No new personal records this session. Keep building!")).toBeVisible();
+  await expect(page.getByText("This is your first recorded session for this workout. Future sessions will appear here for comparison.")).toBeVisible();
 
   await page.goto("/history");
   await expect(page.getByText("1 completed workout")).toBeVisible();
@@ -118,7 +124,14 @@ test("the next workout shows last time and reports a new record", async () => {
 
   await finishWorkout();
   await expect(page.getByText(/New PR · Barbell Bench Press/).first()).toBeVisible();
-  await expect(page.getByTitle(/Current personal record/)).toBeVisible();
+  await expect(stat("New PRs")).toHaveText("2"); // Heaviest weight and est. 1RM, not reps
+  await expect(page.getByText("was 70 kg · +5 kg")).toBeVisible();
+  await expect(page.getByText("Estimated from 75 kg × 8, not a lifted weight.")).toBeVisible();
+
+  // The same summary, opened from History, marks the set that did it.
+  await page.getByRole("link", { name: "View Workout Details" }).click();
+  await expect(page.getByRole("link", { name: "Workout history" })).toBeVisible();
+  await expect(page.getByLabel(/^Personal record: Heaviest weight/)).toBeVisible();
 });
 
 test("progress and records reflect the logged sets", async () => {
@@ -405,6 +418,110 @@ test("sets logged without a connection sync when it returns", async () => {
   await page.getByRole("button", { name: "Discard workout" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Discard workout" }).click();
   await expect(page).toHaveURL(/\/workout$/);
+});
+
+/** Makes the next server action fail: before reaching the server, or after it has done the work. */
+async function failNextAction(mode: "offline" | "lost-response") {
+  await page.evaluate((mode) => {
+    const realFetch = window.fetch;
+    window.fetch = async (input, init) => {
+      if (!new Headers(init?.headers).has("next-action")) return realFetch(input, init);
+      window.fetch = realFetch;
+      if (mode === "lost-response") await realFetch(input, init);
+      throw new TypeError("Failed to fetch");
+    };
+  }, mode);
+}
+
+async function completedWorkouts() {
+  await page.goto("/history");
+  const text = await page.getByText(/\d+ completed workouts?/).first().innerText();
+  return Number(text.match(/\d+/)![0]);
+}
+
+test("finishing survives a failed request and a lost response without duplicating anything", async () => {
+  const before = await completedWorkouts();
+
+  await page.goto("/workout");
+  await page.getByRole("button", { name: "Start empty workout" }).click();
+  await page.getByLabel("Workout name").fill("Leg Day");
+  await addExercise("Back Squat");
+  await logSet("Back Squat", 0, "100", "5");
+  await page.getByRole("button", { name: "Skip rest" }).click();
+  await page.getByRole("button", { name: "Add set" }).click(); // stays unfinished
+  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible({ timeout: 15_000 });
+
+  const openFinish = async () => {
+    await page.getByRole("button", { name: "Finish", exact: true }).click();
+    await page.getByRole("dialog", { name: "Finish workout?" }).getByRole("button", { name: "Finish workout" }).click();
+  };
+
+  // Nothing reached the server: still on the tracker with everything intact.
+  await failNextAction("offline");
+  await openFinish();
+  await expect(page.getByText(/No connection/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Keep training" }).click();
+  await expect(page.getByRole("table", { name: "Back Squat sets" }).getByRole("button", { name: "Completed, tap to undo" })).toHaveCount(1);
+
+  // The server finished it but the answer never came back; the retry must not save over it.
+  await failNextAction("lost-response");
+  await openFinish();
+  await page.getByRole("button", { name: "Keep training" }).click();
+  await expect(page.getByRole("table", { name: "Back Squat sets" })).toBeVisible();
+  await page.waitForTimeout(2500); // room for a late autosave to do damage
+  await finishWorkout();
+  await expect(stat("Completed sets")).toHaveText("1");
+  await expect(stat("Total volume")).toHaveText("500 kg");
+
+  // Refreshing the completion screen is safe.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Workout Complete!" })).toBeVisible();
+  await expect(stat("Completed sets")).toHaveText("1");
+
+  expect(await completedWorkouts()).toBe(before + 1);
+});
+
+test("notes persist, and Repeat Workout starts a new session that compares with the last", async () => {
+  await page.goto("/history");
+  await page.getByRole("link", { name: /Leg Day/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Leg Day" })).toBeVisible();
+
+  await page.getByLabel("Session notes").fill("Knees felt good");
+  await page.getByRole("button", { name: "Save notes" }).click();
+  await expect(page.getByText("Notes saved.").first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Session notes")).toHaveValue("Knees felt good");
+  const original = page.url();
+
+  await page.getByRole("button", { name: "Repeat Workout" }).click();
+  await expect(page).not.toHaveURL(original);
+  await expect(page.getByLabel("Workout name")).toHaveValue("Leg Day");
+  await expect(page.getByRole("heading", { name: "Back Squat" })).toBeVisible();
+  await expect(page.getByRole("table", { name: "Back Squat sets" }).getByRole("button", { name: "Completed, tap to undo" })).toHaveCount(0);
+
+  const row = page.getByRole("table", { name: "Back Squat sets" }).getByRole("row").nth(1);
+  if (!(await row.count())) await page.getByRole("button", { name: "Add set" }).click();
+  await logSet("Back Squat", 0, "110", "5");
+  await page.getByRole("button", { name: "Skip rest" }).click();
+  await finishWorkout();
+
+  await expect(page.getByText("was 100 kg · +10 kg")).toBeVisible();
+  await expect(page.getByText("Leg Day ·", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("+50 kg (+10%)")).toBeVisible();
+  await expect(page.getByText("Highest volume recorded for Leg Day")).toBeVisible();
+
+  // The first workout was left as it was.
+  await page.goto(original);
+  await expect(stat("Total volume")).toHaveText("500 kg");
+  await expect(page.getByLabel("Session notes")).toHaveValue("Knees felt good");
+
+  // The exercise breakdown collapses and expands on the completion screen.
+  await page.goBack();
+  await page.goto(`${original}?completed=1`);
+  const details = page.locator("details").first();
+  await expect(details.getByText(/^W$|^1$/).first()).toBeHidden();
+  await details.locator("summary").click();
+  await expect(details.getByText("100 kg × 5", { exact: true })).toBeVisible();
 });
 
 test("signing out protects the app again", async () => {
