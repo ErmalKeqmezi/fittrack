@@ -152,7 +152,7 @@ async function showNotification(label: string) {
 }
 
 /** Everything that happens when a rest ends. Each channel is independent and optional. */
-export function fireRestAlert(label: string) {
+export function fireRestAlert(label: string, { allowNotification = true } = {}) {
   const prefs = getRestAlertPrefs();
   if (prefs.sound) {
     try {
@@ -166,7 +166,7 @@ export function fireRestAlert(label: string) {
   } catch {
     // Vibration is optional.
   }
-  if (prefs.notify && document.visibilityState === "hidden" && notificationSupport() === "granted") {
+  if (allowNotification && prefs.notify && document.visibilityState === "hidden" && notificationSupport() === "granted") {
     void showNotification(label).catch(() => undefined);
   }
 }

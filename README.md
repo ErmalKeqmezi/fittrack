@@ -160,7 +160,8 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   Settings has an option to play through the iPhone's silent switch, which may stop other audio.
 - **Notifications** work in the background and on the lock screen through Web Push, because iOS freezes a web app's
   own timers. Starting a rest stores a row in `rest_alerts`, and `/api/rest-alert` starts a Netlify background function
-  (`netlify/functions/rest-alert.mts`) that waits until the rest ends and sends the push. A normal function stops after 60 seconds. Skipping or changing the rest replaces or removes the row, so outdated alerts aren't sent. The row is gone once
+  (`netlify/functions/rest-alert.mts`) that waits until the rest ends and sends the push. A normal function stops after 60 seconds. Skipping or changing the rest replaces or removes the row, so outdated alerts aren't sent. While the app is on screen the
+  alert is cancelled 5 seconds before the rest ends, so you only get the sound. The row is gone once
   the alert is sent. No service-role key is needed.
 - **Limits:** rests up to 14 minutes, because background functions stop at 15. Notifications use the phone's own
   sound. On iPhone they need iOS 16.4 or later and FitTrack on the Home Screen.

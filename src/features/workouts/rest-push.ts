@@ -34,30 +34,58 @@ function send(method: "POST" | "DELETE", body: unknown) {
 
 // One at a time, in order, so a quick skip can't overtake the request it cancels.
 let queue: Promise<unknown> = Promise.resolve();
-let scheduled = false;
+/** The end of the rest the server will alert about, if any. */
+let scheduledFor: number | null = null;
 
 function enqueue(task: () => Promise<unknown>) {
   queue = queue.then(task).catch(() => undefined);
 }
 
+/** With a push on its way, a notification from the page would be a duplicate: iOS shows both. */
+export function isRestPushScheduled() {
+  return scheduledFor !== null;
+}
+
 export function scheduleRestPush(endsAt: number, label: string) {
+  if (scheduledFor === endsAt) return;
   if (!getRestAlertPrefs().notify || typeof Notification === "undefined" || Notification.permission !== "granted") return;
-  scheduled = true;
+  scheduledFor = endsAt;
+  const giveUp = () => {
+    if (scheduledFor === endsAt) scheduledFor = null;
+  };
   enqueue(async () => {
-    const subscription = await getSubscription(true);
-    if (!subscription) return;
-    await send("POST", { subscription: subscription.toJSON(), endsAt, label });
+    try {
+      const subscription = await getSubscription(true);
+      const response = subscription ? await send("POST", { subscription: subscription.toJSON(), endsAt, label }) : null;
+      if (response?.status !== 202) giveUp();
+    } catch {
+      giveUp();
+    }
   });
 }
 
 /** Does nothing unless an alert was scheduled from this page. */
 export function cancelRestPush() {
-  if (!scheduled) return;
-  scheduled = false;
+  if (scheduledFor === null) return;
+  scheduledFor = null;
   enqueue(async () => {
     const subscription = await getSubscription(false);
     if (subscription) await send("DELETE", { endpoint: subscription.endpoint });
   });
+}
+
+/** Cancelled this long before the rest ends if the app is open, so the cancel can't arrive too late. */
+export const REST_PUSH_CANCEL_BEFORE_MS = 5_000;
+
+/**
+ * Keeps the alert in step with what the phone is doing. It's scheduled when the
+ * rest starts, because the phone may be locked right after. Near the end it's
+ * only kept if the app isn't on screen; leaving in those last seconds schedules it again.
+ */
+export function syncRestPush(endsAt: number, label: string, visible: boolean, now = Date.now()) {
+  if (now >= endsAt) return;
+  if (visible && endsAt - now <= REST_PUSH_CANCEL_BEFORE_MS) cancelRestPush();
+  else scheduleRestPush(endsAt, label);
 }
 
 /** Call right after notification permission is granted. */

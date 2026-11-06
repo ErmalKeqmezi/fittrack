@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 
 import { fireRestAlert, unlockRestAudio } from "../rest-alert";
-import { cancelRestPush, scheduleRestPush } from "../rest-push";
+import { cancelRestPush, isRestPushScheduled, REST_PUSH_CANCEL_BEFORE_MS, syncRestPush } from "../rest-push";
 import type { RestTimer as RestTimerState } from "../types";
 
 function format(seconds: number) {
@@ -40,12 +40,22 @@ export function RestTimer({
     };
   }, []);
 
-  // The server alerts the phone if the app is in the background when the rest ends.
+  // The server alerts the phone only if the app isn't on screen when the rest ends.
   const endsAt = timer?.endsAt ?? null;
   const label = timer?.label ?? "";
   useEffect(() => {
-    if (endsAt === null) cancelRestPush();
-    else if (endsAt > Date.now()) scheduleRestPush(endsAt, label);
+    if (endsAt === null) {
+      cancelRestPush();
+      return;
+    }
+    const sync = () => syncRestPush(endsAt, label, document.visibilityState === "visible");
+    sync();
+    const nearEnd = setTimeout(sync, Math.max(0, endsAt - Date.now() - REST_PUSH_CANCEL_BEFORE_MS));
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      clearTimeout(nearEnd);
+      document.removeEventListener("visibilitychange", sync);
+    };
   }, [endsAt, label]);
 
   useEffect(() => {
@@ -59,7 +69,7 @@ export function RestTimer({
   useEffect(() => {
     if (!timer || remaining > 0 || notifiedFor.current === timer.endsAt) return;
     notifiedFor.current = timer.endsAt;
-    fireRestAlert(timer.label);
+    fireRestAlert(timer.label, { allowNotification: !isRestPushScheduled() });
     toast("Rest over. Time for the next set.", { duration: 4000 });
     onStop();
   }, [timer, remaining, onStop]);
