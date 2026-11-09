@@ -2,7 +2,7 @@
 
 import { Flag, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useReducer, useRef, useState, useTransition } from "react";
+import { useCallback, useMemo, useReducer, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { ConfirmAction } from "@/components/confirm-button";
@@ -16,6 +16,7 @@ import { formatVolume } from "@/lib/format";
 import { discardWorkout, finishWorkout, loadPreviousPerformance, saveWorkoutEdits, type NewRecord } from "../actions";
 import { pickInitialState } from "../drafts";
 import { cancelRestPush } from "../rest-push";
+import { skipImpact } from "../skip";
 import {
   exerciseProgress,
   initialSetCount,
@@ -28,6 +29,7 @@ import type { PreviousPerformance, TrackerState } from "../types";
 import { useTrackerSync } from "../use-tracker-sync";
 import { ElapsedTime } from "./elapsed-time";
 import { ExerciseCard } from "./exercise-card";
+import { SkipExerciseDialog } from "./skip-exercise-dialog";
 import { RestTimer } from "./rest-timer";
 import { SyncIndicator } from "./sync-indicator";
 
@@ -60,6 +62,22 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
   const [finishOpen, setFinishOpen] = useState(false);
   const [busy, startTransition] = useTransition();
   const finishing = useRef(false);
+  const [skippingId, setSkippingId] = useState<string | null>(null);
+  const muscles = useMemo(() => new Map(library.map((e) => [e.id, { primary: e.primaryMuscle, secondary: e.secondaryMuscles }])), [library]);
+  const skipping = state.exercises.find((e) => e.id === skippingId) ?? null;
+  const impact = skipping ? skipImpact(skipping, state.exercises, muscles, previous[skipping.exerciseId]) : null;
+
+  function confirmSkip() {
+    if (!skipping) return;
+    const exercise = skipping;
+    const index = state.exercises.indexOf(exercise);
+    dispatch({ type: "removeExercise", exerciseId: exercise.id });
+    setSkippingId(null);
+    toast(`Skipped ${exercise.name} for today`, {
+      duration: 8000,
+      action: { label: "Undo", onClick: () => dispatch({ type: "restoreExercise", exercise, index }) },
+    });
+  }
   const live = state.status === "in_progress";
   const sync = useTrackerSync(state, { enabled: live });
 
@@ -248,10 +266,13 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
               live={live}
               timeZone={timeZone}
               dispatch={dispatch}
+              onSkip={setSkippingId}
             />
           ))}
         </div>
       )}
+
+      <SkipExerciseDialog impact={impact} planName={planName} timeZone={timeZone} onConfirm={confirmSkip} onClose={() => setSkippingId(null)} />
 
       <ExercisePickerDialog
         title="Add exercises"

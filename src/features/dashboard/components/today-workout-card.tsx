@@ -1,9 +1,11 @@
-import { BedDouble, CalendarClock, CalendarDays, CheckCircle2, ClipboardList } from "lucide-react";
+import { BedDouble, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Play } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState, Panel, PanelHeader } from "@/components/panel";
 import { routes } from "@/config/routes";
+import { Button } from "@/components/ui/button";
 import { StartWorkoutButton } from "@/features/workouts/components/start-workout-button";
+import type { InProgressWorkout } from "@/features/workouts/queries";
 import { formatDateKey } from "@/lib/dates";
 
 import type { TodaySchedule } from "../today";
@@ -14,7 +16,26 @@ function repRange(min: number, max: number) {
   return min === max ? `${min}` : `${min}–${max}`;
 }
 
-export function TodayWorkoutCard({ schedule, today }: { schedule: TodaySchedule; today: string }) {
+/** Only one workout runs at a time, so while one is open this resumes it rather than starting another. */
+function ResumeButton({ workout, className }: { workout: InProgressWorkout; className?: string }) {
+  return (
+    <Button asChild className={`h-12 rounded-xl px-5 text-base font-semibold ${className ?? ""}`}>
+      <Link href={`${routes.workouts}/${workout.id}`}>
+        <Play aria-hidden /> Resume {workout.name}
+      </Link>
+    </Button>
+  );
+}
+
+export function TodayWorkoutCard({
+  schedule,
+  today,
+  inProgress = null,
+}: {
+  schedule: TodaySchedule;
+  today: string;
+  inProgress?: InProgressWorkout | null;
+}) {
   const dateLabel = formatDateKey(today, { weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -72,14 +93,18 @@ export function TodayWorkoutCard({ schedule, today }: { schedule: TodaySchedule;
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">No exercises added to this day yet.</p>
           )}
-          {!schedule.completedToday && schedule.day.exercises.length ? (
+          {inProgress ? (
+            <ResumeButton workout={inProgress} className="mt-4 w-full" />
+          ) : !schedule.completedToday && schedule.day.exercises.length ? (
             <StartWorkoutButton dayId={schedule.day.id} className="mt-4 w-full">
               Start {schedule.day.name}
             </StartWorkoutButton>
           ) : null}
         </div>
       )}
-      {schedule.kind !== "workout" ? (
+      {schedule.kind !== "workout" && inProgress ? (
+        <ResumeButton workout={inProgress} className="mt-3 w-full" />
+      ) : schedule.kind !== "workout" ? (
         <Link
           href={routes.workout}
           className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-xl border border-border text-sm font-medium text-primary transition-colors hover:bg-secondary"

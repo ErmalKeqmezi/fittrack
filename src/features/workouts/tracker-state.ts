@@ -21,6 +21,7 @@ export type TrackerAction =
   | { type: "setTimes"; startedAt: string; endedAt: string | null }
   | { type: "addExercises"; exercises: NewExercise[] }
   | { type: "removeExercise"; exerciseId: string }
+  | { type: "restoreExercise"; exercise: TrackerExercise; index: number }
   | { type: "moveExercise"; exerciseId: string; offset: -1 | 1 }
   | { type: "setExerciseNotes"; exerciseId: string; notes: string }
   | { type: "toggleExerciseNotes"; exerciseId: string }
@@ -85,6 +86,12 @@ export function trackerReducer(state: TrackerState, action: TrackerAction): Trac
     }
     case "removeExercise":
       return { ...state, exercises: state.exercises.filter((e) => e.id !== action.exerciseId) };
+    case "restoreExercise": {
+      if (state.exercises.length >= MAX_SESSION_EXERCISES || state.exercises.some((e) => e.id === action.exercise.id)) return state;
+      const exercises = [...state.exercises];
+      exercises.splice(Math.min(Math.max(action.index, 0), exercises.length), 0, action.exercise);
+      return { ...state, exercises };
+    }
     case "moveExercise": {
       const index = state.exercises.findIndex((e) => e.id === action.exerciseId);
       const target = index + action.offset;

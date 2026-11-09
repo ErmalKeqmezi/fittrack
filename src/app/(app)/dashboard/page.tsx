@@ -8,6 +8,7 @@ import { StatsGrid } from "@/features/dashboard/components/stats-grid";
 import { TodayWorkoutCard } from "@/features/dashboard/components/today-workout-card";
 import { WeeklyActivity } from "@/features/dashboard/components/weekly-activity";
 import { getDashboardData } from "@/features/dashboard/queries";
+import { getInProgressWorkout } from "@/features/workouts/queries";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -21,7 +22,7 @@ function greeting(timeZone: string) {
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const data = await getDashboardData(user);
+  const [data, inProgress] = await Promise.all([getDashboardData(user), getInProgressWorkout()]);
 
   return (
     <div className="grid gap-5 lg:gap-6">
@@ -33,7 +34,7 @@ export default async function DashboardPage() {
       {/* Phones and tablets put today's workout first; wide screens lead with the stats row. */}
       <div className="grid gap-4 lg:gap-6 xl:grid-cols-12">
         <div className="xl:col-span-5">
-          <TodayWorkoutCard schedule={data.todaySchedule} today={data.today} />
+          <TodayWorkoutCard schedule={data.todaySchedule} today={data.today} inProgress={inProgress} />
         </div>
         <div className="xl:order-first xl:col-span-12">
           <StatsGrid stats={data.stats} />

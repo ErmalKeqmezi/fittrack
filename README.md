@@ -148,6 +148,10 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
 - **Saving**: every change is written to an on-device draft instantly and autosaved to Supabase
   after a short pause, retried while offline and when the connection returns. Saves are full,
   idempotent snapshots with client-generated ids, so retries never duplicate sets.
+- **Skip exercise** (exercise ⋮ menu) explains what skipping costs before anything changes: that it only affects
+  today, which other exercises still train the same main muscle, and the volume it added last time. Confirming
+  removes it from this workout, with Undo. The plan isn't changed.
+- While a workout is running, the dashboard offers **Resume** instead of **Start**, since only one can run at a time.
 - **Finish** drops unfinished rows and empty exercises and renumbers sets. **Discard** deletes
   the in-progress workout.
 - **History** (`/history`) lists completed workouts by month. Each workout shows its sets, notes,

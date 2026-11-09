@@ -204,6 +204,39 @@ test("generates warm-up sets from the suggested weight", async () => {
   await expect(page).toHaveURL(/\/workout$/);
 });
 
+test("the dashboard resumes a running workout, and an exercise can be skipped with its cost explained", async () => {
+  await startPlannedDay();
+  const workoutUrl = page.url();
+
+  await page.goto("/dashboard");
+  await expect(page.getByRole("link", { name: /^Resume Push/ }).last()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Start / })).toHaveCount(0);
+  await page.getByRole("link", { name: /^Resume Push/ }).last().click();
+  await expect(page).toHaveURL(workoutUrl);
+
+  await page.getByRole("button", { name: "Options for Barbell Bench Press" }).click();
+  await page.getByRole("menuitem", { name: "Skip exercise" }).click();
+  const dialog = page.getByRole("dialog", { name: "Skip Barbell Bench Press today?" });
+  await expect(dialog.getByText("This workout only")).toBeVisible();
+  await expect(dialog.getByText(/so today's total will be lower than usual/)).toBeVisible();
+
+  // Nothing happens without confirming.
+  await dialog.getByRole("button", { name: "Keep it" }).click();
+  await expect(page.getByRole("heading", { name: "Barbell Bench Press" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Options for Barbell Bench Press" }).click();
+  await page.getByRole("menuitem", { name: "Skip exercise" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Skip for today" }).click();
+  await expect(page.getByRole("heading", { name: "Barbell Bench Press" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("heading", { name: "Barbell Bench Press" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Discard workout" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Discard workout" }).click();
+  await expect(page).toHaveURL(/\/workout$/);
+});
+
 test("the rest timer keeps the screen on and plays a sound when it ends", async () => {
   await page.goto("/workout");
   await page.getByRole("button", { name: "Start empty workout" }).click();

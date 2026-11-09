@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Flame, Gauge, ListX, MoreVertical, NotebookPen, Plus, Trash2, TrendingUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, Gauge, ListX, MoreVertical, NotebookPen, Plus, SkipForward, Trash2, TrendingUp } from "lucide-react";
 import { memo, useState, type Dispatch } from "react";
 import { toast } from "sonner";
 
@@ -36,6 +36,7 @@ export const ExerciseCard = memo(function ExerciseCard({
   live,
   timeZone,
   dispatch,
+  onSkip,
 }: {
   exercise: TrackerExercise;
   index: number;
@@ -44,6 +45,8 @@ export const ExerciseCard = memo(function ExerciseCard({
   live: boolean;
   timeZone: string;
   dispatch: Dispatch<TrackerAction>;
+  /** Opens the skip panel; only while the workout is live. */
+  onSkip?: (rowId: string) => void;
 }) {
   const [editingSets, setEditingSets] = useState(false);
   const progress = exerciseProgress(exercise);
@@ -120,6 +123,11 @@ export const ExerciseCard = memo(function ExerciseCard({
               <ArrowDown aria-hidden /> Move down
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {live && onSkip ? (
+              <DropdownMenuItem onSelect={() => onSkip(exercise.id)}>
+                <SkipForward aria-hidden /> Skip exercise
+              </DropdownMenuItem>
+            ) : null}
             {hasLoggedSets ? (
               <ConfirmAction
                 title={`Remove ${exercise.name}?`}
