@@ -1,6 +1,7 @@
-import { ArrowLeftRight, BarChart3, Check, ChevronDown, Clock, Dumbbell, Flame, Layers, ListChecks, Repeat, Sparkles, TrendingUp, Trophy, Weight } from "lucide-react";
+import { ArrowLeftRight, BarChart3, Check, ChevronDown, Dumbbell, Flame, ListChecks, Sparkles, TrendingUp, Trophy } from "lucide-react";
 
 import { EmptyState, Panel, PanelHeader } from "@/components/panel";
+import { StatStrip } from "@/components/stat-strip";
 import { formatDateKey, toDateKey } from "@/lib/dates";
 import { formatDuration, formatInteger, formatKg, formatSignedKg, formatVolume } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -38,36 +39,28 @@ function Change({ label, value, change }: { label: string; value: string; change
 }
 
 export function SummaryStats({ stats }: { stats: WorkoutSummary["stats"] }) {
-  const items = [
-    { icon: Clock, label: "Duration", value: formatDuration(stats.durationMinutes) },
-    { icon: Weight, label: "Total volume", value: formatVolume(stats.volumeKg) },
-    { icon: Dumbbell, label: "Exercises", value: formatInteger(stats.exerciseCount) },
-    { icon: Layers, label: "Completed sets", value: formatInteger(stats.setCount) },
-    { icon: Repeat, label: "Total reps", value: formatInteger(stats.repCount) },
-    { icon: Trophy, label: "New PRs", value: formatInteger(stats.recordCount) },
-  ];
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-      {items.map(({ icon: Icon, label, value }) => (
-        <div key={label} className="rounded-2xl border border-border bg-card p-4">
-          <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Icon className="size-3.5 shrink-0 text-primary" aria-hidden /> {label}
-          </dt>
-          <dd className="mt-1.5 text-xl font-semibold tabular-nums">{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <StatStrip
+      stats={[
+        { label: "Duration", value: formatDuration(stats.durationMinutes) },
+        { label: "Total volume", value: formatVolume(stats.volumeKg) },
+        { label: "Exercises", value: formatInteger(stats.exerciseCount) },
+        { label: "Completed sets", value: formatInteger(stats.setCount) },
+        { label: "Total reps", value: formatInteger(stats.repCount) },
+        { label: "New PRs", value: formatInteger(stats.recordCount), accent: stats.recordCount > 0 },
+      ]}
+    />
   );
 }
 
 function ExerciseRow({ exercise, open, timeZone }: { exercise: SummaryExercise; open: boolean; timeZone: string }) {
   const { previous } = exercise;
   return (
-    <details open={open} className="group rounded-xl border border-border bg-background/40">
-      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-xl px-3 py-2.5 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+    <details open={open} className="group border-b border-border last:border-b-0">
+      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 py-2.5 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-medium">{exercise.name}</span>
+            <span className="truncate font-display text-xl leading-tight font-semibold tracking-[0.015em]">{exercise.name}</span>
             {exercise.recordCount ? <Trophy className="size-3.5 shrink-0 text-primary" aria-label="New personal record" /> : null}
           </span>
           <span className="block truncate text-xs text-muted-foreground tabular-nums">
@@ -79,7 +72,7 @@ function ExerciseRow({ exercise, open, timeZone }: { exercise: SummaryExercise; 
         <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
       </summary>
 
-      <div className="border-t border-border px-3 py-3">
+      <div className="pb-4">
         {exercise.sets.length ? (
           <ol className="grid gap-1.5">
             {exercise.sets.map((set) => (
@@ -118,7 +111,7 @@ function ExerciseRow({ exercise, open, timeZone }: { exercise: SummaryExercise; 
           <p className="mt-3 text-xs text-muted-foreground tabular-nums">Best est. 1RM {formatKg(exercise.bestE1rmKg)}</p>
         ) : null}
 
-        <div className="mt-3 rounded-lg bg-secondary/50 px-3 py-2.5">
+        <div className="mt-3 border-l-2 border-border py-1 pl-3">
           {previous ? (
             <>
               <p className="text-xs text-muted-foreground tabular-nums">
@@ -149,7 +142,7 @@ export function ExerciseBreakdown({ exercises, open, timeZone }: { exercises: Su
     <Panel>
       <PanelHeader title="Exercises" icon={ListChecks} description={open ? undefined : "Tap an exercise to see its sets"} />
       {exercises.length ? (
-        <div className="grid gap-2">
+        <div>
           {exercises.map((exercise) => (
             <ExerciseRow key={exercise.id} exercise={exercise} open={open} timeZone={timeZone} />
           ))}
@@ -170,19 +163,19 @@ export function PersonalRecords({ records, celebrate }: { records: SummaryRecord
     <Panel>
       <PanelHeader title="Personal records" icon={Trophy} />
       {records.length ? (
-        <ul className="grid gap-2">
+        <ul className="grid gap-4">
           {records.map((record, i) => (
             <li
               key={`${record.exerciseId}-${record.type}`}
               style={celebrate ? { animationDelay: `${i * 90}ms` } : undefined}
               className={cn(
-                "rounded-xl border border-primary/25 bg-accent/40 px-3 py-2.5",
+                "border-l-2 border-primary py-1 pl-4",
                 celebrate && "animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500 motion-reduce:animate-none",
               )}
             >
               <div className="flex items-baseline justify-between gap-3">
-                <p className="min-w-0 truncate text-sm font-medium">{record.exerciseName}</p>
-                <p className="shrink-0 text-sm font-semibold text-primary tabular-nums">{recordValue(record, record.value)}</p>
+                <p className="min-w-0 truncate font-display text-xl leading-tight font-semibold tracking-[0.015em]">{record.exerciseName}</p>
+                <p className="shrink-0 text-xl leading-none font-medium text-primary tabular-nums">{recordValue(record, record.value)}</p>
               </div>
               <div className="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-3 text-xs text-muted-foreground tabular-nums">
                 <p>{RECORD_LABELS[record.type]}</p>
@@ -226,13 +219,13 @@ export function PreviousComparison({ comparison, timeZone }: { comparison: Sessi
     <Panel>
       <PanelHeader title="Compared with last time" icon={ArrowLeftRight} description={`${comparison.name} · ${shortDate(comparison.startedAt, timeZone)}`} />
       <dl className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-secondary/50 p-3">
+        <div className="border-l-2 border-border py-1 pl-3">
           <dt className="text-xs text-muted-foreground">Volume</dt>
           <dd className={cn("mt-1 text-sm font-semibold tabular-nums", comparison.volumeChangeKg > 0 && "text-primary")}>
             {withPercent(formatSignedKg(comparison.volumeChangeKg), comparison.volumeChangePercent, comparison.volumeChangeKg)}
           </dd>
         </div>
-        <div className="rounded-xl bg-secondary/50 p-3">
+        <div className="border-l-2 border-border py-1 pl-3">
           <dt className="text-xs text-muted-foreground">Duration</dt>
           <dd className="mt-1 text-sm font-semibold tabular-nums">
             {comparison.durationChangeMinutes === null ? "—" : durationChangeText(comparison.durationChangeMinutes)}
@@ -286,8 +279,8 @@ export function MuscleWork({ muscles }: { muscles: MuscleBreakdown[] }) {
                     {byVolume ? formatVolume(m.volumeKg) : `${m.sets} ${m.sets === 1 ? "set" : "sets"}`}
                   </span>
                 </div>
-                <div className="mt-1.5 h-2 rounded-full bg-secondary" aria-hidden>
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${max ? (value(m) / max) * 100 : 0}%` }} />
+                <div className="mt-1.5 h-1.5 bg-secondary" aria-hidden>
+                  <div className="h-full bg-primary" style={{ width: `${max ? (value(m) / max) * 100 : 0}%` }} />
                 </div>
               </li>
             ))}
@@ -333,19 +326,21 @@ export function WorkoutHighlights({ highlights }: { highlights: Highlight[] }) {
   );
 }
 
-/** The header shown right after finishing. */
+/** The header shown right after finishing: the top of the session report. */
 export function CompletionHeader({ name, when, message }: { name: string; when: string; message: string }) {
   return (
-    <header className="flex flex-col items-center gap-3 py-2 text-center lg:py-4">
-      <span className="grid size-16 animate-in place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 duration-500 zoom-in-50 motion-reduce:animate-none">
-        <Check className="size-8" strokeWidth={3} aria-hidden />
-      </span>
-      <div className="min-w-0 max-w-full">
-        <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">Workout Complete!</h1>
-        <p className="mt-1 text-base font-medium break-words">{name}</p>
-        <p className="mt-0.5 text-sm text-muted-foreground">{when}</p>
-        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+    <header className="pt-2 lg:pt-4">
+      <div className="flex items-center gap-3">
+        <span className="grid size-9 animate-in place-items-center bg-primary text-primary-foreground duration-500 zoom-in-50 motion-reduce:animate-none">
+          <Check className="size-5" strokeWidth={3.5} aria-hidden />
+        </span>
+        <p className="eyebrow text-muted-foreground">Session report · {when}</p>
       </div>
+      <h1 className="mt-5 text-[3.4rem] leading-[0.88] font-bold sm:text-8xl">
+        Workout <span className="text-primary">Complete!</span>
+      </h1>
+      <p className="mt-4 font-display text-3xl leading-none font-semibold tracking-[0.02em] break-words uppercase">{name}</p>
+      <p className="mt-3 text-sm text-muted-foreground">{message}</p>
     </header>
   );
 }

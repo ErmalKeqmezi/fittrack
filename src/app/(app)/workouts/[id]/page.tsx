@@ -73,7 +73,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
   const buttonClass = "h-12 rounded-xl px-5";
 
   return (
-    <div className="grid gap-5 lg:gap-6">
+    <div className="grid gap-8 lg:gap-10">
       {justFinished ? (
         <CompletionHeader name={state.name} when={when} message={message} />
       ) : (
@@ -81,7 +81,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
           <BackLink href={routes.history}>Workout history</BackLink>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight break-words lg:text-3xl">{state.name}</h1>
+              <h1 className="text-[2.5rem] leading-[0.95] font-bold break-words lg:text-6xl">{state.name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {when}
                 {workout.planName ? ` · ${workout.planName}` : ""}
@@ -100,13 +100,13 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
         </p>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-6">
-        <div className="grid gap-5 lg:gap-6">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-12">
+        <div className="grid gap-8 lg:gap-10">
           <PersonalRecords records={summary.records} celebrate={justFinished} />
           <ExerciseBreakdown exercises={summary.exercises} open={!justFinished} timeZone={user.timeZone} />
           <PreviousComparison comparison={summary.comparison} timeZone={user.timeZone} />
         </div>
-        <div className="grid gap-5 lg:gap-6">
+        <div className="grid gap-8 lg:gap-10">
           <WorkoutHighlights highlights={summary.highlights} />
           <MuscleWork muscles={summary.muscles} />
           <SessionNotes key={state.notes} sessionId={state.sessionId} initial={state.notes} />

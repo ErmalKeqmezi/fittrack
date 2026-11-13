@@ -33,6 +33,7 @@ export const ExerciseCard = memo(function ExerciseCard({
   index,
   count,
   previous,
+  muscle,
   live,
   timeZone,
   dispatch,
@@ -43,6 +44,8 @@ export const ExerciseCard = memo(function ExerciseCard({
   index: number;
   count: number;
   previous: PreviousPerformance | undefined;
+  /** Main muscle, when the exercise is still in the library. */
+  muscle?: string;
   live: boolean;
   timeZone: string;
   dispatch: Dispatch<TrackerAction>;
@@ -79,10 +82,11 @@ export const ExerciseCard = memo(function ExerciseCard({
     <section aria-labelledby={`ex-${exercise.id}`} className="rounded-2xl border border-border bg-card">
       <header className="flex items-start gap-2 p-4 pb-2">
         <div className="min-w-0 flex-1">
-          <h3 id={`ex-${exercise.id}`} className="truncate text-base font-semibold">
+          {muscle ? <p className="eyebrow mb-1.5 text-brand-soft">{muscle}</p> : null}
+          <h3 id={`ex-${exercise.id}`} className="text-2xl leading-[1.05] font-semibold break-words">
             {exercise.name}
           </h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             {exercise.targets
               ? `Target ${exercise.targets.sets} × ${exercise.targets.repsMin === exercise.targets.repsMax ? exercise.targets.repsMin : `${exercise.targets.repsMin}–${exercise.targets.repsMax}`} · `
               : ""}

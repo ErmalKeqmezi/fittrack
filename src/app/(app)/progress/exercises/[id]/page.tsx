@@ -42,7 +42,7 @@ export default async function ExerciseProgressPage({ params, searchParams }: Pag
       <BackLink href={`${routes.progress}?range=${range}`}>Progress</BackLink>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">{exercise.name}</h1>
+          <h1 className="min-w-0 text-[2.5rem] leading-[0.95] font-bold break-words lg:text-6xl">{exercise.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {exercise.primaryMuscle.name} · {data.totalSessions} logged {data.totalSessions === 1 ? "session" : "sessions"}
           </p>
@@ -116,8 +116,8 @@ export default async function ExerciseProgressPage({ params, searchParams }: Pag
         ) : null}
       </Panel>
 
-      <Panel className="p-0 sm:p-0">
-        <div className="p-4 pb-3 sm:px-5">
+      <Panel>
+        <div className="">
           <PanelHeader title="Sessions" description="Newest first" icon={History} />
         </div>
         {data.points.length === 0 ? (

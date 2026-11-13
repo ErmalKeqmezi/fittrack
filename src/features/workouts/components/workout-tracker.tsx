@@ -238,7 +238,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
   return (
     <div className="grid gap-4 pb-28 lg:pb-8">
       {/* Session bar */}
-      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 -mx-4 border-b border-border bg-background/90 px-4 py-3 backdrop-blur-lg sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10">
+      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 -mx-4 border-b border-border bg-background px-4 py-3 sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <input
@@ -246,9 +246,9 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
               value={state.name}
               maxLength={80}
               onChange={(e) => dispatch({ type: "rename", name: e.target.value })}
-              className="w-full truncate rounded-md bg-transparent text-lg font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:text-2xl"
+              className="w-full truncate rounded-md bg-transparent font-display text-3xl leading-none font-bold tracking-[0.015em] uppercase outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:text-4xl"
             />
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
               {live ? <ElapsedTime since={state.startedAt} className="font-semibold text-foreground tabular-nums" /> : <span>Editing logged workout</span>}
               <span className="tabular-nums">
                 {totals.sets} {totals.sets === 1 ? "set" : "sets"} · {formatVolume(Math.round(totals.volume))}
@@ -258,7 +258,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
             </div>
           </div>
           {live ? (
-            <Button className="h-11 rounded-xl px-4" onClick={() => setFinishOpen(true)} disabled={busy}>
+            <Button className="cta h-12 rounded-xl px-5 text-lg" onClick={() => setFinishOpen(true)} disabled={busy}>
               <Flag aria-hidden /> Finish
             </Button>
           ) : (
@@ -322,6 +322,7 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
               index={i}
               count={state.exercises.length}
               previous={previous[exercise.exerciseId]}
+              muscle={muscles.get(exercise.exerciseId)?.primary.name}
               live={live}
               timeZone={timeZone}
               dispatch={dispatch}

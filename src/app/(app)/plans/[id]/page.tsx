@@ -40,7 +40,7 @@ export default async function PlanEditorPage({ params }: PageProps<"/plans/[id]"
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">{plan.name}</h1>
+            <h1 className="min-w-0 text-[2.5rem] leading-[0.95] font-bold break-words lg:text-6xl">{plan.name}</h1>
             {plan.isActive ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-brand-soft">
                 <CircleCheck className="size-3.5" aria-hidden /> Active

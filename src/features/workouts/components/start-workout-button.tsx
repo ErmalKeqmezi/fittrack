@@ -27,7 +27,7 @@ export function StartWorkoutButton({
   return (
     <Button
       variant={variant}
-      className={cn("h-12 rounded-xl px-5 text-base font-semibold", className)}
+      className={cn("cta h-14 rounded-xl px-6 text-xl", className)}
       disabled={pending}
       onClick={() =>
         startTransition(async () => {

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/features/auth/queries";
 import { ProgressHighlights } from "@/features/dashboard/components/progress-highlights";
 import { RecentWorkouts } from "@/features/dashboard/components/recent-workouts";
@@ -24,24 +23,23 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const [data, inProgress] = await Promise.all([getDashboardData(user), getInProgressWorkout()]);
 
-  return (
-    <div className="grid gap-5 lg:gap-6">
-      <PageHeader
-        title={`${greeting(user.timeZone)}${user.displayName ? `, ${user.displayName}` : ""}`}
-        description="Your training at a glance"
-      />
+  const hello = `${greeting(user.timeZone)}${user.displayName ? `, ${user.displayName}` : ""}`;
 
-      {/* Phones and tablets put today's workout first; wide screens lead with the stats row. */}
-      <div className="grid gap-4 lg:gap-6 xl:grid-cols-12">
-        <div className="xl:col-span-5">
-          <TodayWorkoutCard schedule={data.todaySchedule} today={data.today} inProgress={inProgress} />
-        </div>
-        <div className="xl:order-first xl:col-span-12">
-          <StatsGrid stats={data.stats} />
-        </div>
+  return (
+    <div className="grid gap-9 lg:gap-12">
+      {/* Lead: what to do today, beside this week's activity. */}
+      <div className="grid gap-9 xl:grid-cols-12 xl:gap-12">
         <div className="xl:col-span-7">
+          <TodayWorkoutCard schedule={data.todaySchedule} today={data.today} inProgress={inProgress} greeting={hello} />
+        </div>
+        <div className="xl:col-span-5">
           <WeeklyActivity data={data} />
         </div>
+      </div>
+
+      <StatsGrid stats={data.stats} />
+
+      <div className="grid gap-9 xl:grid-cols-12 xl:gap-12">
         <div className="xl:col-span-7">
           <RecentWorkouts workouts={data.recentWorkouts} timeZone={data.timeZone} />
         </div>

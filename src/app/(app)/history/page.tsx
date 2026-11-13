@@ -28,7 +28,7 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
   }
 
   return (
-    <div className="grid gap-5 lg:gap-6">
+    <div className="grid gap-8 lg:gap-10">
       <PageHeader title="Workout history" description={`${total} completed ${total === 1 ? "workout" : "workouts"}`} />
 
       {total === 0 ? (
@@ -40,31 +40,31 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
         </EmptyState>
       ) : (
         [...groups].map(([month, items]) => (
-          <section key={month} aria-labelledby={`m-${month}`} className="grid gap-2">
-            <h2 id={`m-${month}`} className="text-sm font-semibold text-muted-foreground">
+          <section key={month} aria-labelledby={`m-${month}`} className="grid gap-1">
+            <h2 id={`m-${month}`} className="eyebrow">
               {formatDateKey(`${month}-01`, { month: "long", year: "numeric" })}
             </h2>
-            <ul className="grid gap-2">
+            <ul className="border-t border-border">
               {items.map((w) => {
                 const dateKey = toDateKey(w.startedAt, user.timeZone);
                 return (
                   <li key={w.id}>
                     <Link
                       href={`${routes.workouts}/${w.id}`}
-                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary/40 sm:p-4"
+                      className="group flex items-center gap-4 border-b border-border py-3.5 transition-colors hover:bg-secondary/50"
                     >
-                      <span className="grid w-12 shrink-0 place-items-center rounded-xl bg-secondary py-1.5 text-center">
-                        <span className="text-[10px] font-medium uppercase text-muted-foreground">{formatDateKey(dateKey, { weekday: "short" })}</span>
-                        <span className="text-lg font-semibold leading-tight tabular-nums">{formatDateKey(dateKey, { day: "numeric" })}</span>
+                      <span className="grid w-11 shrink-0 text-left">
+                        <span className="eyebrow">{formatDateKey(dateKey, { weekday: "short" })}</span>
+                        <span className="mt-1 text-2xl leading-none font-medium tabular-nums">{formatDateKey(dateKey, { day: "numeric" })}</span>
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{w.name}</span>
-                        <span className="block truncate text-xs text-muted-foreground tabular-nums">
+                        <span className="block truncate font-display text-xl leading-tight font-semibold tracking-[0.015em]">{w.name}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
                           {formatDuration(sessionDurationMinutes(w))} · {w.exerciseCount} exercises · {w.workingSetCount} sets
                         </span>
                       </span>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums">{formatVolume(w.volumeKg)}</span>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                      <span className="shrink-0 text-base font-medium tabular-nums">{formatVolume(w.volumeKg)}</span>
+                      <ChevronRight className="size-4 shrink-0 text-faint group-hover:text-primary" aria-hidden />
                     </Link>
                   </li>
                 );

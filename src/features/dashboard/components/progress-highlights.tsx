@@ -46,16 +46,16 @@ export function ProgressHighlights({ data }: { data: DashboardData }) {
           Train an exercise in two separate sessions to see how your top set and estimated 1RM change.
         </EmptyState>
       ) : (
-        <ul className="grid gap-2.5">
+        <ul className="divide-y divide-border">
           {data.highlights.map((h) => (
-            <li key={h.exerciseId} className="rounded-xl border border-border bg-secondary/40 px-3.5 py-3">
+            <li key={h.exerciseId} className="py-3 first:pt-0">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="truncate text-sm font-medium">{h.exerciseName}</p>
                 <p className="shrink-0 text-xs text-muted-foreground">{dateOf(h.latest.startedAt)}</p>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                Top set (actual): <span className="text-foreground">{formatKg(h.latest.topWeightKg)} × {h.latest.topWeightReps}</span>
-                {" "}· previously {formatKg(h.previous.topWeightKg)} × {h.previous.topWeightReps}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Top set (actual): <span className="text-foreground tabular-nums">{formatKg(h.latest.topWeightKg)} × {h.latest.topWeightReps}</span>
+                {" "}· previously <span className="tabular-nums">{formatKg(h.previous.topWeightKg)} × {h.previous.topWeightReps}</span>
               </p>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                 <Change value={h.topWeightChangeKg} label="Top weight" />
@@ -66,9 +66,9 @@ export function ProgressHighlights({ data }: { data: DashboardData }) {
         </ul>
       )}
 
-      <div className="mt-5 border-t border-border pt-4">
-        <div className="mb-2.5 flex items-center justify-between gap-2">
-          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+      <div className="mt-6 border-t border-border pt-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="eyebrow flex items-center gap-2">
             <Trophy className="size-3.5 text-primary" aria-hidden /> Latest personal records
           </p>
           {data.latestRecords.length ? (

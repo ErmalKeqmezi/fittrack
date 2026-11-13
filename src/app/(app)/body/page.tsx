@@ -92,8 +92,8 @@ export default async function BodyPage({ searchParams }: PageProps<"/body">) {
             <MetricChart entries={entries} from={rangeStart(range, today)} />
           </Panel>
 
-          <Panel className="p-0 sm:p-0">
-            <div className="p-4 pb-3 sm:px-5">
+          <Panel>
+            <div className="">
               <PanelHeader title="History" description="Tap an entry to edit or delete it" icon={History} />
             </div>
             <ul className="divide-y divide-border border-t border-border">

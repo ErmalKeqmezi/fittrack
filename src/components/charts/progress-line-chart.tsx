@@ -51,7 +51,7 @@ export function ProgressLineChart({
               tickFormatter={(key: string) => data.find((d) => d.key === key)?.label ?? ""}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize }}
+              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize, fontFamily: chartTheme.fontFamily }}
               interval="preserveStartEnd"
               minTickGap={24}
             />
@@ -60,7 +60,7 @@ export function ProgressLineChart({
               tickLine={false}
               axisLine={false}
               domain={values.length ? [Math.max(0, Math.floor(min - pad)), Math.ceil(max + pad)] : [0, 1]}
-              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize }}
+              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize, fontFamily: chartTheme.fontFamily }}
               tickFormatter={(v: number) => formatValue(v).replace(/ ?(kg|cm|%)$/, "")}
             />
             <Tooltip
@@ -94,7 +94,8 @@ export function ProgressLineChart({
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <table id={tableId} className="sr-only">
+      <div className="sr-only">
+      <table id={tableId}>
         <caption>{caption}</caption>
         <thead>
           <tr>
@@ -113,6 +114,7 @@ export function ProgressLineChart({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

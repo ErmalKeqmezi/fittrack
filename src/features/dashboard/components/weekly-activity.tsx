@@ -19,8 +19,8 @@ export function WeeklyActivity({ data }: { data: DashboardData }) {
         icon={Activity}
       />
       <WeekStrip days={data.weekDays} />
-      <div className="mt-6 border-t border-border pt-5">
-        <p className="mb-3 text-xs font-medium text-muted-foreground">Last {data.weeklyBuckets.length} weeks</p>
+      <div className="mt-7">
+        <p className="eyebrow mb-3">Last {data.weeklyBuckets.length} weeks</p>
         {hasHistory ? (
           <PeriodBarChart data={weeklyBars(data.weeklyBuckets)} caption="Weekly training activity" />
         ) : (

@@ -1,13 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, IBM_Plex_Mono, Inter } from "next/font/google";
 
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Display for headings, Inter for interface text, Plex Mono for weights, reps and statistics.
+const display = Barlow_Condensed({ variable: "--font-barlow-condensed", subsets: ["latin"], weight: ["500", "600", "700"] });
+const sans = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const mono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
   title: { default: "FitTrack", template: "%s · FitTrack" },
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#101014",
+  themeColor: "#101114",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -28,7 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}>
+    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable} dark h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         {children}
         <Toaster position="top-center" />

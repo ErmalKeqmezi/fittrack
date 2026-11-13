@@ -158,6 +158,26 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   totals, est. 1RM (labelled as an estimate) and a comparison with the previous time each exercise
   was trained. Workouts can be edited (sets, exercises, notes, start time, duration) or deleted.
 
+## Exercise swapping
+
+- **In a workout:** every exercise has a Swap button. The panel suggests alternatives from the library's own
+  classifications (`features/exercises/alternatives.ts`): same main muscle first, then the same kind of movement,
+  category and shared secondary muscles. The whole library is searchable and can be filtered by muscle and equipment.
+- **Nothing logged yet:** the replacement takes the slot, keeping order, set and rep targets, rest and note. Weights
+  are never copied; the replacement shows its own last performance.
+- **Sets already completed:** they stay with the original exercise. The replacement is added after it for the
+  remaining sets, so volume and records always belong to the exercise that was performed.
+- **This workout only** is the default. **Also update my plan** changes the saved plan day; finished workouts keep
+  the exercise they were logged with. The planner has the same Swap button on every exercise.
+- Targets of a workout-only swap are remembered on the device, since the plan still lists the original.
+
+## Design system
+
+Tokens live in `src/app/globals.css`: a three-level dark surface scale, purple as an accent only, and a 4 px radius.
+Type: Barlow Condensed for headings, Inter for interface text, IBM Plex Mono for every number (anything with
+`tabular-nums`). Sections are separated by hairline rules and labelled headings (`Panel`), figures sit in a ruled
+`StatStrip`, and lists are ruled rows rather than cards. `cta` and `eyebrow` are the two custom text utilities.
+
 ## Rest alerts
 
 - **Sound** plays when a rest ends while FitTrack is open. Audio unlocks on a completed tap, as iOS requires.

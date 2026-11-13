@@ -62,8 +62,8 @@ export default async function RecordsPage() {
             </ul>
           </Panel>
 
-          <Panel className="p-0 sm:p-0">
-            <div className="p-4 pb-3 sm:px-5">
+          <Panel>
+            <div className="">
               <PanelHeader title="By exercise" description={`${exercises.length} exercises`} />
             </div>
             <div className="hidden grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))_1rem] gap-3 border-y border-border px-5 py-2 text-xs font-medium text-muted-foreground md:grid">

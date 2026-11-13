@@ -57,7 +57,7 @@ export function PeriodBarChart({ data, caption, heightClass = "h-44 sm:h-56" }: 
               dataKey="label"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize }}
+              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize, fontFamily: chartTheme.fontFamily }}
               interval="preserveStartEnd"
               minTickGap={16}
             />
@@ -66,7 +66,7 @@ export function PeriodBarChart({ data, caption, heightClass = "h-44 sm:h-56" }: 
               tickLine={false}
               axisLine={false}
               allowDecimals={metric === "volumeKg"}
-              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize }}
+              tick={{ fill: chartTheme.axisText, fontSize: chartTheme.fontSize, fontFamily: chartTheme.fontFamily }}
               tickFormatter={(v: number) => (metric === "volumeKg" ? formatVolume(v).replace(" kg", "") : String(v))}
             />
             <Tooltip
@@ -90,7 +90,8 @@ export function PeriodBarChart({ data, caption, heightClass = "h-44 sm:h-56" }: 
         </ResponsiveContainer>
       </div>
 
-      <table id={tableId} className="sr-only">
+      <div className="sr-only">
+      <table id={tableId}>
         <caption>{caption}</caption>
         <thead>
           <tr>
@@ -109,6 +110,7 @@ export function PeriodBarChart({ data, caption, heightClass = "h-44 sm:h-56" }: 
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

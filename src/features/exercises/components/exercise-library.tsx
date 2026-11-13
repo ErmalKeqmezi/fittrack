@@ -170,7 +170,7 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
       </div>
 
       {results.length ? (
-        <ul className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid border-t border-border md:grid-cols-2 md:gap-x-10 xl:grid-cols-3">
           {results.map((exercise) => (
             <li key={exercise.id}>
               <ExerciseCard exercise={exercise} />

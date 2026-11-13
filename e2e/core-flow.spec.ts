@@ -72,7 +72,7 @@ test("first-time setup creates the owner and closes registration", async () => {
   await page.getByLabel("Confirm password").fill(OWNER.password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(OWNER.name);
+  await expect(page.getByText(new RegExp(`^Good .*, ${OWNER.name}$|^Late session, ${OWNER.name}$`))).toBeVisible();
 
   // Registration is closed for everyone else.
   const fresh = await page.context().browser()!.newPage();

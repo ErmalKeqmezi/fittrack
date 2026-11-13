@@ -25,12 +25,13 @@ export function SidebarNavLink({ href }: { href: string }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground transition-colors",
-        "hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring",
-        active && "bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground",
+        "relative flex h-11 items-center gap-3 px-5 font-display text-[1.05rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase transition-colors",
+        "hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+        // The current section is marked by a bar on the edge, not a filled pill.
+        active && "text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:bg-primary",
       )}
     >
-      <Icon className={cn("size-[18px] transition-colors", active && "text-primary")} aria-hidden />
+      <Icon className={cn("size-[17px] transition-colors", active ? "text-primary" : "text-faint")} aria-hidden />
       {item.label}
     </Link>
   );
@@ -46,19 +47,12 @@ export function BottomNavLink({ href }: { href: string }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium text-muted-foreground transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-ring active:scale-95",
-        active && "text-brand-soft",
+        "relative flex min-h-[3.75rem] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 overflow-hidden font-display text-[10px] font-semibold tracking-[0.04em] text-faint uppercase transition-colors min-[380px]:text-[11px] min-[380px]:tracking-[0.1em]",
+        "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring active:text-foreground",
+        active && "text-foreground before:absolute before:inset-x-3 before:top-0 before:h-0.5 before:bg-primary",
       )}
     >
-      <span
-        className={cn(
-          "grid h-8 w-11 place-items-center rounded-full transition-colors",
-          active && "bg-accent text-primary",
-        )}
-      >
-        <Icon className="size-5" aria-hidden />
-      </span>
+      <Icon className={cn("size-5", active && "text-primary")} aria-hidden />
       {item.label}
     </Link>
   );

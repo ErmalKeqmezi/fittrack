@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: var(--font-barlow-condensed), "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -40,6 +41,9 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-brand-soft: var(--brand-soft);
+  --color-faint: var(--faint);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -50,40 +54,48 @@
 }
 
 :root {
-  /* FitTrack palette – the app is dark-only. */
-  --background: #101014;
-  --foreground: #e5e1ec;
-  --card: #1a1a22;
-  --card-foreground: #e5e1ec;
-  --popover: #1a1a22;
-  --popover-foreground: #e5e1ec;
-  --primary: #9b6dff;
-  --primary-foreground: #101014;
-  --secondary: #22202b;
-  --secondary-foreground: #e5e1ec;
-  --muted: #22202b;
-  --muted-foreground: #9d97aa;
-  --accent: #241e38;
-  --accent-foreground: #bca0ff;
-  --destructive: #ff5c7a;
-  --border: #292632;
-  --input: #292632;
-  --ring: #9b6dff;
-  --brand-soft: #bca0ff;
-  --chart-1: #9b6dff;
-  --chart-2: #bca0ff;
-  --chart-3: #6e4fd1;
-  --chart-4: #5ad1c4;
-  --chart-5: #f2b866;
-  --radius: 0.875rem;
-  --sidebar: #15151b;
-  --sidebar-foreground: #e5e1ec;
-  --sidebar-primary: #9b6dff;
-  --sidebar-primary-foreground: #101014;
-  --sidebar-accent: #241e38;
-  --sidebar-accent-foreground: #bca0ff;
-  --sidebar-border: #292632;
-  --sidebar-ring: #9b6dff;
+  /*
+   * FitTrack design tokens. The app is dark-only.
+   * Surfaces step up in three levels; purple is an accent for actions,
+   * progress and records, never a background for ordinary content.
+   */
+  --background: #101114;
+  --foreground: #f3f2f0;
+  --card: #17181d;
+  --card-foreground: #f3f2f0;
+  --popover: #1e2027;
+  --popover-foreground: #f3f2f0;
+  --primary: #9875ff;
+  --primary-foreground: #101114;
+  --secondary: #1e2027;
+  --secondary-foreground: #f3f2f0;
+  --muted: #1e2027;
+  --muted-foreground: #a4a5ae;
+  --faint: #747680;
+  --accent: #211d31;
+  --accent-foreground: #b59aff;
+  --destructive: #e0645a;
+  --success: #74b391;
+  --warning: #dba84e;
+  --border: #30323a;
+  --input: #30323a;
+  --ring: #9875ff;
+  --brand-soft: #b59aff;
+  --chart-1: #9875ff;
+  --chart-2: #b59aff;
+  --chart-3: #6a55b5;
+  --chart-4: #74b391;
+  --chart-5: #dba84e;
+  /* Small radius: squared, technical corners. Pills stay fully round. */
+  --radius: 0.25rem;
+  --sidebar: #101114;
+  --sidebar-foreground: #f3f2f0;
+  --sidebar-primary: #9875ff;
+  --sidebar-primary-foreground: #101114;
+  --sidebar-accent: #1e2027;
+  --sidebar-accent-foreground: #f3f2f0;
+  --sidebar-border: #30323a;
+  --sidebar-ring: #9875ff;
   color-scheme: dark;
 }
 
@@ -100,6 +112,31 @@
   html {
     @apply font-sans;
   }
+  /* Type system: condensed display for headings, mono for every number. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.015em;
+  }
+  h1,
+  h2 {
+    text-transform: uppercase;
+  }
+  :where([class~="tabular-nums"]) {
+    font-family: var(--font-mono);
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
 
 @layer base {
@@ -117,4 +154,12 @@
   body {
     min-height: 100dvh;
   }
+}
+
+/* Primary calls to action: Start, Finish, Resume. */
+@utility cta {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
 }

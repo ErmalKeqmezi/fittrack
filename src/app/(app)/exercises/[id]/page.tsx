@@ -38,7 +38,7 @@ export default async function ExerciseDetailPage({ params }: PageProps<"/exercis
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">{exercise.name}</h1>
+            <h1 className="min-w-0 text-[2.5rem] leading-[0.95] font-bold break-words lg:text-6xl">{exercise.name}</h1>
             <ExerciseStatusBadges exercise={exercise} />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">

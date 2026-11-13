@@ -14,9 +14,8 @@ import { MuscleVolume } from "@/features/analytics/components/muscle-volume";
 import { RangeTabs } from "@/features/analytics/components/range-tabs";
 import { getProgressOverview } from "@/features/analytics/queries";
 import { requireUser } from "@/features/auth/queries";
-import { statValueSize } from "@/features/dashboard/components/stat-card";
+import { StatStrip } from "@/components/stat-strip";
 import { formatDuration, formatInteger, formatKg, formatVolume } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -54,22 +53,19 @@ export default async function ProgressPage({ searchParams }: PageProps<"/progres
         </EmptyState>
       ) : (
         <>
-          <dl className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            {stats.map(({ icon: Icon, label, value, change }) => (
-              <div key={label} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-                <dt className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground sm:text-sm">
-                  {label} <Icon className="size-4 text-primary" aria-hidden />
-                </dt>
-                <dd className={cn("mt-2 font-semibold tracking-tight whitespace-nowrap tabular-nums", statValueSize(value))}>{value}</dd>
-                {change !== undefined && vsLabel ? (
-                  <dd className="mt-1 flex flex-wrap items-center gap-1">
+          <StatStrip
+            stats={stats.map(({ label, value, change }) => ({
+              label,
+              value,
+              hint:
+                change !== undefined && vsLabel ? (
+                  <span className="flex flex-wrap items-center gap-1">
                     <ChangeBadge value={change} unit="%" />
-                    <span className="text-xs text-muted-foreground">{change === null ? "" : vsLabel}</span>
-                  </dd>
-                ) : null}
-              </div>
-            ))}
-          </dl>
+                    {change === null ? "" : vsLabel}
+                  </span>
+                ) : undefined,
+            }))}
+          />
 
           <div className="grid gap-4 xl:grid-cols-2 xl:gap-6">
             <Panel>
@@ -89,15 +85,15 @@ export default async function ProgressPage({ searchParams }: PageProps<"/progres
             rangeLabel={range === "all" ? "all time" : `last ${RANGE_LABELS[range].toLowerCase()}`}
           />
 
-          <Panel className="p-0 sm:p-0">
-            <div className="p-4 pb-3 sm:px-5">
+          <Panel>
+            <div>
               <PanelHeader
                 title="Exercises"
                 description={range === "all" ? "Everything you have logged" : `Trained in the last ${RANGE_LABELS[range].toLowerCase()}`}
               />
             </div>
             {data.exercises.length === 0 ? (
-              <p className="px-4 pb-5 text-sm text-muted-foreground sm:px-5">No exercises logged in this period.</p>
+              <p className="text-sm text-muted-foreground">No exercises logged in this period.</p>
             ) : (
               <>
               <div
