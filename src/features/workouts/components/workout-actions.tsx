@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ConfirmAction } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes";
+import { offline } from "@/lib/offline";
 
 import { deleteWorkout } from "../actions";
 
@@ -27,7 +28,7 @@ export function WorkoutActions({ sessionId, name }: { sessionId: string; name: s
         confirmLabel="Delete workout"
         onConfirm={() =>
           startTransition(async () => {
-            const result = await deleteWorkout(sessionId);
+            const result = await deleteWorkout(sessionId).catch(offline);
             if (!result.ok) toast.error(result.message);
           })
         }

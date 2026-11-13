@@ -237,6 +237,79 @@ test("the dashboard resumes a running workout, and an exercise can be skipped wi
   await expect(page).toHaveURL(/\/workout$/);
 });
 
+test("swaps exercises in a workout without moving completed sets, and in the plan", async () => {
+  await startPlannedDay();
+  const card = (name: string) => page.getByRole("region", { name, exact: true });
+  const swapDialog = page.getByRole("dialog");
+
+  // 1. Nothing logged yet: the replacement takes the slot and its targets.
+  await page.getByRole("button", { name: "Swap Barbell Bench Press" }).click();
+  await expect(swapDialog.getByText("Suggested for Chest")).toBeVisible();
+  await swapDialog.getByLabel("Search exercises").fill("incline dumbbell press");
+  await expect(swapDialog.getByRole("button", { name: /^Incline Dumbbell Press/ })).toBeDisabled(); // already in the workout
+  await swapDialog.getByRole("button", { name: "Clear search" }).click();
+  await swapDialog.getByRole("button", { name: /^Dumbbell Bench Press/ }).first().click();
+  await expect(swapDialog.getByText(/takes its place, with the same order/)).toBeVisible();
+  await swapDialog.getByRole("button", { name: "Back" }).click(); // nothing happened yet
+  await expect(page.getByRole("region", { name: "Barbell Bench Press", exact: true, includeHidden: true })).toHaveCount(1);
+  await swapDialog.getByRole("button", { name: /^Dumbbell Bench Press/ }).first().click();
+  await swapDialog.getByRole("button", { name: "Swap for this workout" }).click();
+  await expect(card("Barbell Bench Press")).toHaveCount(0);
+  await expect(card("Dumbbell Bench Press").getByText(/Target 4 × 6–8/)).toBeVisible();
+  await expect(card("Dumbbell Bench Press").getByLabel("Weight in kg")).toHaveCount(4);
+  await expect(page.getByRole("heading", { level: 3 }).first()).toHaveText("Dumbbell Bench Press"); // same position
+
+  // 2. One set done: it stays with the original; the replacement is added for the rest.
+  await logSet("Incline Dumbbell Press", 0, "20", "10");
+  await page.getByRole("button", { name: "Skip rest" }).click();
+  await page.getByRole("button", { name: "Swap Incline Dumbbell Press" }).click();
+  await swapDialog.getByLabel("Search exercises").fill("machine chest");
+  await swapDialog.getByRole("button", { name: /^Machine Chest Press/ }).click();
+  await expect(swapDialog.getByText("Incline Dumbbell Press is already partly done")).toBeVisible();
+  await expect(swapDialog.getByText(/for the remaining 2 sets/)).toBeVisible();
+  await swapDialog.getByRole("button", { name: "Swap for this workout" }).click();
+  await expect(card("Incline Dumbbell Press").getByRole("button", { name: "Completed, tap to undo" })).toHaveCount(1);
+  await expect(card("Incline Dumbbell Press").getByLabel("Weight in kg")).toHaveCount(1);
+  await expect(card("Machine Chest Press").getByText(/Target 2 × 8–10/)).toBeVisible();
+
+  // 3. Filters narrow the list; swapping can also update the saved plan.
+  await page.getByRole("button", { name: "Swap Triceps Pushdown" }).click();
+  await swapDialog.getByLabel("Equipment").selectOption("ez_bar");
+  await swapDialog.getByLabel("Muscle group").selectOption("triceps");
+  await expect(swapDialog.getByRole("button", { name: /^Skull Crusher/ })).toBeVisible();
+  await expect(swapDialog.getByRole("button", { name: /^Preacher Curl/ })).toHaveCount(0);
+  await swapDialog.getByRole("button", { name: /^Skull Crusher/ }).click();
+  await swapDialog.getByLabel(/Also update my Push \/ Pull \/ Legs plan/).check();
+  await swapDialog.getByRole("button", { name: "Swap and update plan" }).click();
+  await expect(page.getByText("Swapped to Skull Crusher and updated your plan.")).toBeVisible();
+
+  // Survives a reload, targets included.
+  await logSet("Machine Chest Press", 0, "40", "10");
+  await page.getByRole("button", { name: "Skip rest" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible({ timeout: 15_000 });
+  await page.reload();
+  await expect(card("Machine Chest Press").getByText(/Target 2 × 8–10/)).toBeVisible();
+  await expect(card("Skull Crusher").getByText(/Target 3 × 10–12/)).toBeVisible();
+
+  // Each exercise is recorded under its own name.
+  await finishWorkout();
+  await expect(stat("Exercises")).toHaveText("2");
+  await expect(stat("Completed sets")).toHaveText("2");
+  await expect(page.getByText("Incline Dumbbell Press", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Machine Chest Press", { exact: true }).first()).toBeVisible();
+
+  // 4. The plan has the new exercise; swap it back from the planner.
+  await page.goto("/plans");
+  await page.getByRole("link", { name: /Push \/ Pull \/ Legs/ }).first().click();
+  await page.getByRole("button", { name: "Swap Skull Crusher" }).click();
+  await swapDialog.getByLabel("Search exercises").fill("triceps pushdown");
+  await swapDialog.getByRole("button", { name: /^Triceps Pushdown/ }).click();
+  await swapDialog.getByRole("button", { name: "Swap in plan" }).click();
+  await expect(page.getByText("Swapped to Triceps Pushdown.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Swap Triceps Pushdown" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Swap Skull Crusher" })).toHaveCount(0);
+});
+
 test("the rest timer keeps the screen on and plays a sound when it ends", async () => {
   await page.goto("/workout");
   await page.getByRole("button", { name: "Start empty workout" }).click();

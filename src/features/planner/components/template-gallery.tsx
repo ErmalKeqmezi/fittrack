@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { offline } from "@/lib/offline";
 
 import { createPlanFromTemplate } from "../actions";
 import { PLAN_TEMPLATES } from "../templates";
@@ -18,7 +19,7 @@ export function TemplateGallery() {
     setPendingKey(key);
     startTransition(async () => {
       // Redirects to the new plan on success.
-      const result = await createPlanFromTemplate(key);
+      const result = await createPlanFromTemplate(key).catch(offline);
       if (!result.ok) toast.error(result.message);
       setPendingKey(null);
     });

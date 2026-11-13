@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { formatRest, formatTargets, MAX_EXERCISES_PER_DAY, WEEKDAY_LABELS, type Weekday } from "../constants";
 import type { PlanDay } from "../types";
 import { DayDialog } from "./day-dialog";
+import { SwapPlanExercise } from "./swap-plan-exercise";
 import { TargetsDialog } from "./targets-dialog";
 
 export function DayCard({
@@ -28,6 +29,7 @@ export function DayCard({
 }) {
   const totalSets = day.exercises.reduce((sum, e) => sum + e.targetSets, 0);
   // Weekdays held by the other days of the plan.
+  const dayExerciseIds = day.exercises.map((e) => e.exercise.id);
   const otherWeekdays = new Map(takenWeekdays);
   if (day.weekday) otherWeekdays.delete(day.weekday);
 
@@ -69,7 +71,7 @@ export function DayCard({
           {day.exercises.length ? (
             <ol className="divide-y divide-border">
               {day.exercises.map((item, i) => (
-                <li key={item.id}>
+                <li key={item.id} className="flex items-center">
                   <TargetsDialog
                     item={item}
                     isFirst={i === 0}
@@ -77,7 +79,7 @@ export function DayCard({
                     trigger={
                       <button
                         type="button"
-                        className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/50 focus-visible:bg-secondary/50 focus-visible:outline-none sm:px-5"
+                        className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pr-2 pl-4 text-left transition-colors hover:bg-secondary/50 focus-visible:bg-secondary/50 focus-visible:outline-none sm:px-5"
                       >
                         <span className="w-5 shrink-0 text-xs text-muted-foreground tabular-nums">{i + 1}</span>
                         <span className="min-w-0 flex-1">
@@ -98,6 +100,7 @@ export function DayCard({
                       </button>
                     }
                   />
+                  <SwapPlanExercise item={item} dayExerciseIds={dayExerciseIds} library={library} />
                 </li>
               ))}
             </ol>

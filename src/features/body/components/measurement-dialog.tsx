@@ -11,6 +11,7 @@ import { SubmitButton } from "@/components/forms/submit-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useFormAction } from "@/hooks/use-form-action";
+import { offline } from "@/lib/offline";
 
 import { deleteMeasurement, saveMeasurement, type MeasurementState } from "../actions";
 import { METRIC_GROUPS, METRICS, type Measurement, type MeasurementValues } from "../constants";
@@ -60,7 +61,7 @@ function MeasurementForm({ today, latest, entry, onDone }: Omit<Props, "trigger"
   function remove() {
     if (!entry) return;
     startDelete(async () => {
-      const result = await deleteMeasurement(entry.id);
+      const result = await deleteMeasurement(entry.id).catch(offline);
       if (result.ok) {
         toast.success(result.message);
         onDone();

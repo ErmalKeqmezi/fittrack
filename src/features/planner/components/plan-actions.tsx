@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ConfirmAction } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { offline } from "@/lib/offline";
 
 import { deletePlan, updatePlanDetails } from "../actions";
 import { PlanDetailsForm } from "./plan-details-form";
@@ -19,7 +20,7 @@ export function PlanActions({ planId, name, description }: { planId: string; nam
   function remove() {
     startTransition(async () => {
       // Redirects to the plans list on success.
-      const result = await deletePlan(planId);
+      const result = await deletePlan(planId).catch(offline);
       if (!result.ok) toast.error(result.message);
     });
   }

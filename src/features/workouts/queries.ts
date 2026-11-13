@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { readAllPages } from "@/lib/supabase/read-all";
 import { createClient } from "@/lib/supabase/server";
 
 import type { ExerciseMuscles } from "@/features/analytics/calculations";
@@ -182,21 +183,6 @@ export async function listWorkoutHistory(page: number): Promise<{ entries: Histo
   };
 }
 
-const PAGE_SIZE = 1000;
-
-/** Supabase returns at most 1000 rows per request, so long histories are read in pages. */
-async function readAllPages<T>(
-  readPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
-): Promise<T[]> {
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await readPage(from, from + PAGE_SIZE - 1);
-    if (error) throw new Error(`Could not load the workout summary: ${error.message}`);
-    rows.push(...(data ?? []));
-    if ((data?.length ?? 0) < PAGE_SIZE) return rows;
-  }
-}
-
 /** The summary of a finished workout, calculated from what is saved right now. */
 export async function getWorkoutSummary(workout: LoadedWorkout): Promise<WorkoutSummary> {
   const { state } = workout;
@@ -207,7 +193,7 @@ export async function getWorkoutSummary(workout: LoadedWorkout): Promise<Workout
     getPreviousPerformance(exerciseIds, state.startedAt, state.sessionId),
     listExercises(),
     exerciseIds.length
-      ? readAllPages((from, to) =>
+      ? readAllPages("the workout summary", (from, to) =>
           supabase
             .from("exercise_session_bests")
             .select("session_exercise_id, exercise_id, top_weight_kg, max_reps, best_e1rm_kg")
@@ -217,7 +203,7 @@ export async function getWorkoutSummary(workout: LoadedWorkout): Promise<Workout
             .range(from, to),
         )
       : [],
-    readAllPages((from, to) =>
+    readAllPages("the workout summary", (from, to) =>
       supabase
         .from("session_summaries")
         .select("id, name, workout_day_id, started_at, volume_kg")

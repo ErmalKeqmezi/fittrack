@@ -4,6 +4,7 @@ import type { CurrentUser } from "@/features/auth/queries";
 import type { BodyRegion } from "@/features/exercises/constants";
 import { listExercises, listMuscleGroups } from "@/features/exercises/queries";
 import { addDays, toDateKey } from "@/lib/dates";
+import { readAllPages } from "@/lib/supabase/read-all";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -45,12 +46,15 @@ function fail(context: string, message: string): never {
 
 async function loadSessions(): Promise<SessionSummary[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("session_summaries")
-    .select("id, name, started_at, ended_at, exercise_count, working_set_count, volume_kg")
-    .eq("status", "completed")
-    .order("started_at", { ascending: true });
-  if (error) fail("workouts", error.message);
+  const data = await readAllPages("workouts", (from, to) =>
+    supabase
+      .from("session_summaries")
+      .select("id, name, started_at, ended_at, exercise_count, working_set_count, volume_kg")
+      .eq("status", "completed")
+      .order("started_at", { ascending: true })
+      .order("id")
+      .range(from, to),
+  );
   return data.map((s) => ({
     id: s.id!,
     name: s.name!,
@@ -103,18 +107,20 @@ export async function getProgressOverview(user: CurrentUser, range: Range) {
   const previous = previousPeriod(range, today);
 
   const supabase = await createClient();
-  let bestsQuery = supabase.from("exercise_session_bests").select(BEST_COLUMNS).order("started_at", { ascending: true });
   const lower = queryFrom(from);
-  if (lower) bestsQuery = bestsQuery.gte("started_at", lower);
+  const readBests = (pageFrom: number, pageTo: number) => {
+    let query = supabase.from("exercise_session_bests").select(BEST_COLUMNS).order("started_at", { ascending: true }).order("session_exercise_id");
+    if (lower) query = query.gte("started_at", lower);
+    return query.range(pageFrom, pageTo);
+  };
 
-  const [sessions, bestsRes, recordsRes, library, muscleGroups] = await Promise.all([
+  const [sessions, bestRows, recordsRes, library, muscleGroups] = await Promise.all([
     loadSessions(),
-    bestsQuery,
+    readAllPages("exercise progress", readBests),
     supabase.from("personal_records").select("id", { count: "exact", head: true }),
     listExercises(),
     listMuscleGroups(),
   ]);
-  if (bestsRes.error) fail("exercise progress", bestsRes.error.message);
   if (recordsRes.error) fail("personal records", recordsRes.error.message);
 
   const current = sessions.filter((s) => inPeriod(s.startedAt, timeZone, from, today));
@@ -129,7 +135,7 @@ export async function getProgressOverview(user: CurrentUser, range: Range) {
   const logged: { exerciseId: string; workingSets: number }[] = [];
 
   const byExercise = new Map<string, { name: string; points: ExerciseSessionStats[] }>();
-  for (const row of bestsRes.data as BestRow[]) {
+  for (const row of bestRows as BestRow[]) {
     if (!row.exercise_id || !row.started_at || !inPeriod(row.started_at, timeZone, from, today)) continue;
     const entry = byExercise.get(row.exercise_id) ?? { name: row.exercise_name ?? "Exercise", points: [] };
     entry.points.push(toStats(row));
@@ -170,17 +176,24 @@ export async function getExerciseProgress(user: CurrentUser, exerciseId: string,
   const from = rangeStart(range, today);
 
   const supabase = await createClient();
-  const [bestsRes, recordsRes] = await Promise.all([
-    supabase.from("exercise_session_bests").select(BEST_COLUMNS).eq("exercise_id", exerciseId).order("started_at", { ascending: true }),
+  const [bestRows, recordsRes] = await Promise.all([
+    readAllPages("exercise progress", (pageFrom, pageTo) =>
+      supabase
+        .from("exercise_session_bests")
+        .select(BEST_COLUMNS)
+        .eq("exercise_id", exerciseId)
+        .order("started_at", { ascending: true })
+        .order("session_exercise_id")
+        .range(pageFrom, pageTo),
+    ),
     supabase
       .from("personal_records")
       .select("id, record_type, value, weight_kg, reps, achieved_at, session_id, exercise_set_id")
       .eq("exercise_id", exerciseId),
   ]);
-  if (bestsRes.error) fail("exercise progress", bestsRes.error.message);
   if (recordsRes.error) fail("personal records", recordsRes.error.message);
 
-  const all = (bestsRes.data as BestRow[]).map(toStats);
+  const all = (bestRows as BestRow[]).map(toStats);
   const points = all.filter((p) => inPeriod(p.startedAt, timeZone, from, today));
 
   return {

@@ -56,6 +56,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
         library={exercises.filter((e) => !e.isArchived)}
         timeZone={user.timeZone}
         planName={workout.planName}
+        workoutDayId={workout.workoutDayId}
       />
     );
   }

@@ -11,6 +11,7 @@ import {
 } from "@/features/analytics/calculations";
 import type { CurrentUser } from "@/features/auth/queries";
 import { addDays, startOfWeek, toDateKey } from "@/lib/dates";
+import { readAllPages } from "@/lib/supabase/read-all";
 import { createClient } from "@/lib/supabase/server";
 
 import { resolveTodaySchedule, type ActivePlanInput } from "./today";
@@ -30,12 +31,16 @@ export async function getDashboardData(user: CurrentUser) {
   const today = toDateKey(now, timeZone);
   const lookbackFrom = new Date(now.getTime() - HIGHLIGHT_LOOKBACK_DAYS * 86_400_000).toISOString();
 
-  const [sessionsRes, recordsCountRes, latestRecordsRes, bestsRes, planRes] = await Promise.all([
-    supabase
-      .from("session_summaries")
-      .select("id, name, started_at, ended_at, exercise_count, working_set_count, volume_kg")
-      .eq("status", "completed")
-      .order("started_at", { ascending: false }),
+  const [sessionRows, recordsCountRes, latestRecordsRes, bestsRes, planRes] = await Promise.all([
+    readAllPages("workouts", (from, to) =>
+      supabase
+        .from("session_summaries")
+        .select("id, name, started_at, ended_at, exercise_count, working_set_count, volume_kg")
+        .eq("status", "completed")
+        .order("started_at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
     supabase.from("personal_records").select("id", { count: "exact", head: true }),
     supabase
       .from("personal_records")
@@ -57,13 +62,12 @@ export async function getDashboardData(user: CurrentUser) {
       .maybeSingle(),
   ]);
 
-  if (sessionsRes.error) fail("workouts", sessionsRes.error.message);
   if (recordsCountRes.error) fail("personal records", recordsCountRes.error.message);
   if (latestRecordsRes.error) fail("personal records", latestRecordsRes.error.message);
   if (bestsRes.error) fail("exercise progress", bestsRes.error.message);
   if (planRes.error) fail("workout plan", planRes.error.message);
 
-  const sessions: SessionSummary[] = (sessionsRes.data ?? []).map((s) => ({
+  const sessions: SessionSummary[] = sessionRows.map((s) => ({
     id: s.id!,
     name: s.name!,
     startedAt: s.started_at!,

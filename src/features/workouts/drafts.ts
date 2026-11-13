@@ -43,11 +43,31 @@ export function clearDraft(sessionId: string) {
   }
 }
 
+/**
+ * Targets come from the plan, matched by exercise. An exercise swapped in for
+ * this workout only isn't in the plan, so the server copy has no targets for
+ * it; this device's draft still knows them, along with its unfilled rows.
+ */
+export function restoreSwapTargets(server: TrackerState, draft: TrackerState): TrackerState {
+  const drafted = new Map(draft.exercises.map((e) => [e.id, e]));
+  return {
+    ...server,
+    exercises: server.exercises.map((exercise) => {
+      const known = drafted.get(exercise.id);
+      if (exercise.targets || !known?.targets || known.exerciseId !== exercise.exerciseId) return exercise;
+      const saved = new Set(exercise.sets.map((s) => s.id));
+      const unfilled = known.sets.filter((s) => !s.done && !saved.has(s.id));
+      return { ...exercise, targets: known.targets, restSeconds: known.restSeconds, sets: [...exercise.sets, ...unfilled] };
+    }),
+  };
+}
+
 /** Use the draft only if it is newer than the last server save. */
 export function pickInitialState(server: TrackerState, serverUpdatedAt: string): { state: TrackerState; fromDraft: boolean } {
   const draft = readDraft(server.sessionId);
-  if (draft && draft.savedAt > Date.parse(serverUpdatedAt) && draft.state.status === server.status) {
-    return { state: draft.state, fromDraft: true };
+  if (draft && draft.state.status === server.status) {
+    if (draft.savedAt > Date.parse(serverUpdatedAt)) return { state: draft.state, fromDraft: true };
+    return { state: restoreSwapTargets(server, draft.state), fromDraft: false };
   }
   return { state: server, fromDraft: false };
 }

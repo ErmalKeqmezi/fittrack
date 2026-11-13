@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { readAllPages } from "@/lib/supabase/read-all";
 import { createClient } from "@/lib/supabase/server";
 
 import type { BodyRegion, Category, Equipment } from "./constants";
@@ -86,18 +87,21 @@ export type ExerciseUsage = {
 /** Recorded history for one exercise (completed workouts only). */
 export async function getExerciseUsage(exerciseId: string): Promise<ExerciseUsage> {
   const supabase = await createClient();
-  const [bestsRes, plansRes] = await Promise.all([
-    supabase
-      .from("exercise_session_bests")
-      .select("started_at, top_weight_kg, top_weight_reps")
-      .eq("exercise_id", exerciseId)
-      .order("started_at", { ascending: false }),
+  const [bestRows, plansRes] = await Promise.all([
+    readAllPages("exercise history", (from, to) =>
+      supabase
+        .from("exercise_session_bests")
+        .select("started_at, top_weight_kg, top_weight_reps")
+        .eq("exercise_id", exerciseId)
+        .order("started_at", { ascending: false })
+        .order("session_exercise_id")
+        .range(from, to),
+    ),
     supabase.from("plan_exercises").select("id", { count: "exact", head: true }).eq("exercise_id", exerciseId),
   ]);
-  if (bestsRes.error) throw new Error(`Could not load exercise history: ${bestsRes.error.message}`);
   if (plansRes.error) throw new Error(`Could not load exercise usage: ${plansRes.error.message}`);
 
-  const rows = bestsRes.data.map((r) => ({
+  const rows = bestRows.map((r) => ({
     performedAt: r.started_at!,
     weightKg: Number(r.top_weight_kg ?? 0),
     reps: r.top_weight_reps ?? 0,

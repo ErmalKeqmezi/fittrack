@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { offline } from "@/lib/offline";
 
 import { startWorkout } from "../actions";
 
@@ -30,7 +31,7 @@ export function StartWorkoutButton({
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
-          const result = await startWorkout(dayId);
+          const result = await startWorkout(dayId).catch(offline);
           if (!result.ok) toast.error(result.message);
         })
       }

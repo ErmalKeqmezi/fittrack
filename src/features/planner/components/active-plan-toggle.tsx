@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { offline } from "@/lib/offline";
 
 import { setActivePlan } from "../actions";
 
@@ -14,7 +15,7 @@ export function ActivePlanToggle({ planId, isActive, className }: { planId: stri
 
   function toggle() {
     startTransition(async () => {
-      const result = await setActivePlan(planId, !isActive);
+      const result = await setActivePlan(planId, !isActive).catch(offline);
       if (result.ok) toast.success(result.message);
       else toast.error(result.message);
     });

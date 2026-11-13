@@ -22,6 +22,7 @@ export type TrackerAction =
   | { type: "addExercises"; exercises: NewExercise[] }
   | { type: "removeExercise"; exerciseId: string }
   | { type: "restoreExercise"; exercise: TrackerExercise; index: number }
+  | { type: "swapExercise"; rowId: string; replacement: { id: string; exerciseId: string; name: string; setIds: string[] } }
   | { type: "moveExercise"; exerciseId: string; offset: -1 | 1 }
   | { type: "setExerciseNotes"; exerciseId: string; notes: string }
   | { type: "toggleExerciseNotes"; exerciseId: string }
@@ -47,6 +48,20 @@ function mapExercise(state: TrackerState, exerciseId: string, fn: (e: TrackerExe
 
 function mapSet(exercise: TrackerExercise, setId: string, fn: (s: TrackerSet) => TrackerSet): TrackerExercise {
   return { ...exercise, sets: exercise.sets.map((s) => (s.id === setId ? fn(s) : s)) };
+}
+
+/**
+ * What swapping an exercise does. With nothing completed the replacement takes
+ * its slot. Once sets are completed they are history: the original keeps them
+ * and the replacement is added after it for the sets that are left.
+ */
+export function swapPlan(exercise: TrackerExercise): { mode: "replace" | "add"; completedSets: number; setCount: number } {
+  const completedSets = exercise.sets.filter((s) => s.done).length;
+  const working = exercise.sets.filter((s) => !s.isWarmup);
+  const doneWorking = working.filter((s) => s.done).length;
+  const planned = Math.max(exercise.targets?.sets ?? 0, working.length);
+  if (!completedSets) return { mode: "replace", completedSets, setCount: Math.min(Math.max(planned, 1), MAX_SETS_PER_EXERCISE) };
+  return { mode: "add", completedSets, setCount: Math.min(Math.max(planned - doneWorking, 1), MAX_SETS_PER_EXERCISE) };
 }
 
 /** Number of empty rows a newly added exercise starts with. */
@@ -90,6 +105,36 @@ export function trackerReducer(state: TrackerState, action: TrackerAction): Trac
       if (state.exercises.length >= MAX_SESSION_EXERCISES || state.exercises.some((e) => e.id === action.exercise.id)) return state;
       const exercises = [...state.exercises];
       exercises.splice(Math.min(Math.max(action.index, 0), exercises.length), 0, action.exercise);
+      return { ...state, exercises };
+    }
+    case "swapExercise": {
+      const index = state.exercises.findIndex((e) => e.id === action.rowId);
+      if (index < 0) return state;
+      const original = state.exercises[index];
+      const plan = swapPlan(original);
+      const sets = action.replacement.setIds.slice(0, plan.setCount).map(emptySet);
+      const exercises = [...state.exercises];
+
+      if (plan.mode === "replace") {
+        // Takes over the slot: same position, targets, rest and note. Weights don't carry over.
+        exercises[index] = { ...original, id: action.replacement.id, exerciseId: action.replacement.exerciseId, name: action.replacement.name, sets };
+        return { ...state, exercises };
+      }
+
+      // Completed sets stay with the exercise that was actually performed.
+      if (state.exercises.length >= MAX_SESSION_EXERCISES) return state;
+      exercises[index] = { ...original, sets: original.sets.filter((s) => s.done) };
+      exercises.splice(index + 1, 0, {
+        id: action.replacement.id,
+        exerciseId: action.replacement.exerciseId,
+        name: action.replacement.name,
+        notes: "",
+        showNotes: false,
+        showRpe: original.showRpe,
+        restSeconds: original.restSeconds,
+        targets: original.targets ? { ...original.targets, sets: plan.setCount } : null,
+        sets,
+      });
       return { ...state, exercises };
     }
     case "moveExercise": {

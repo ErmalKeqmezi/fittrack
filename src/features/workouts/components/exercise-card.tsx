@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Flame, Gauge, ListX, MoreVertical, NotebookPen, Plus, SkipForward, Trash2, TrendingUp } from "lucide-react";
+import { ArrowDown, ArrowLeftRight, ArrowUp, Flame, Gauge, ListX, MoreVertical, NotebookPen, Plus, SkipForward, Trash2, TrendingUp } from "lucide-react";
 import { memo, useState, type Dispatch } from "react";
 import { toast } from "sonner";
 
@@ -37,6 +37,7 @@ export const ExerciseCard = memo(function ExerciseCard({
   timeZone,
   dispatch,
   onSkip,
+  onSwap,
 }: {
   exercise: TrackerExercise;
   index: number;
@@ -47,6 +48,8 @@ export const ExerciseCard = memo(function ExerciseCard({
   dispatch: Dispatch<TrackerAction>;
   /** Opens the skip panel; only while the workout is live. */
   onSkip?: (rowId: string) => void;
+  /** Opens the swap panel; only while the workout is live. */
+  onSwap?: (rowId: string) => void;
 }) {
   const [editingSets, setEditingSets] = useState(false);
   const progress = exerciseProgress(exercise);
@@ -91,6 +94,11 @@ export const ExerciseCard = memo(function ExerciseCard({
             {lastVolume !== null ? ` of ${formatVolume(lastVolume)} last time` : ""}
           </p>
         </div>
+        {live && onSwap ? (
+          <Button variant="ghost" className="size-11 shrink-0 rounded-xl text-muted-foreground" aria-label={`Swap ${exercise.name}`} onClick={() => onSwap(exercise.id)}>
+            <ArrowLeftRight aria-hidden />
+          </Button>
+        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="size-11 shrink-0 rounded-xl" aria-label={`Options for ${exercise.name}`}>
@@ -123,6 +131,11 @@ export const ExerciseCard = memo(function ExerciseCard({
               <ArrowDown aria-hidden /> Move down
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {live && onSwap ? (
+              <DropdownMenuItem onSelect={() => onSwap(exercise.id)}>
+                <ArrowLeftRight aria-hidden /> Swap exercise
+              </DropdownMenuItem>
+            ) : null}
             {live && onSkip ? (
               <DropdownMenuItem onSelect={() => onSkip(exercise.id)}>
                 <SkipForward aria-hidden /> Skip exercise

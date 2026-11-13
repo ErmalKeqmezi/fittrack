@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { routes } from "@/config/routes";
 import { ExercisePickerDialog } from "@/features/exercises/components/exercise-picker-dialog";
+import { SwapExerciseDialog, type SwapRequest } from "@/features/exercises/components/swap-exercise-dialog";
+import { swapPlanExerciseInDay } from "@/features/planner/actions";
+import { offline } from "@/lib/offline";
 import type { Exercise } from "@/features/exercises/types";
 import { formatVolume } from "@/lib/format";
 
@@ -18,6 +21,7 @@ import { pickInitialState } from "../drafts";
 import { cancelRestPush } from "../rest-push";
 import { skipImpact } from "../skip";
 import {
+  swapPlan,
   exerciseProgress,
   initialSetCount,
   MAX_SESSION_EXERCISES,
@@ -40,6 +44,8 @@ type Props = {
   library: Exercise[];
   timeZone: string;
   planName: string | null;
+  /** The plan day this workout was started from, if any. */
+  workoutDayId?: string | null;
 };
 
 function describeRecord(r: NewRecord) {
@@ -55,7 +61,7 @@ function toLocalInput(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrevious, library, timeZone, planName }: Props) {
+export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrevious, library, timeZone, planName, workoutDayId = null }: Props) {
   const router = useRouter();
   const [state, dispatch] = useReducer(trackerReducer, undefined, () => pickInitialState(initial, serverUpdatedAt).state);
   const [previous, setPrevious] = useState(initialPrevious);
@@ -66,6 +72,59 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
   const muscles = useMemo(() => new Map(library.map((e) => [e.id, { primary: e.primaryMuscle, secondary: e.secondaryMuscles }])), [library]);
   const skipping = state.exercises.find((e) => e.id === skippingId) ?? null;
   const impact = skipping ? skipImpact(skipping, state.exercises, muscles, previous[skipping.exerciseId]) : null;
+
+  const [swapId, setSwapId] = useState<string | null>(null);
+  const swapping = state.exercises.find((e) => e.id === swapId) ?? null;
+  const swapRequest = useMemo<SwapRequest | null>(() => {
+    if (!swapping) return null;
+    const plan = swapPlan(swapping);
+    return {
+      original: { exerciseId: swapping.exerciseId, name: swapping.name },
+      unavailableIds: new Set(state.exercises.map((e) => e.exerciseId)),
+      unavailableLabel: "In workout",
+      completedSets: plan.completedSets,
+      remainingSets: plan.setCount,
+      // Only an exercise that came from the plan can be replaced in it.
+      planName: workoutDayId && swapping.targets ? planName : null,
+      scope: "workout",
+    };
+  }, [swapping, state.exercises, workoutDayId, planName]);
+
+  async function confirmSwap(replacement: Exercise, { updatePlan }: { updatePlan: boolean }) {
+    if (!swapping) return false;
+    const original = swapping;
+    const plan = swapPlan(original);
+    if (plan.mode === "add" && state.exercises.length >= MAX_SESSION_EXERCISES) {
+      toast.error("This workout is full, so another exercise can't be added.");
+      return false;
+    }
+    dispatch({
+      type: "swapExercise",
+      rowId: original.id,
+      replacement: {
+        id: crypto.randomUUID(),
+        exerciseId: replacement.id,
+        name: replacement.name,
+        setIds: Array.from({ length: plan.setCount }, () => crypto.randomUUID()),
+      },
+    });
+    setSwapId(null);
+
+    if (!previous[replacement.id]) {
+      loadPreviousPerformance([replacement.id], state.startedAt, state.sessionId)
+        .then((loaded) => setPrevious((p) => ({ ...p, ...loaded })))
+        .catch(() => undefined); // Offline: hints appear once the page reloads online.
+    }
+
+    if (updatePlan && workoutDayId) {
+      const result = await swapPlanExerciseInDay(workoutDayId, original.exerciseId, replacement.id).catch(offline);
+      if (result.ok) toast.success(`Swapped to ${replacement.name} and updated your plan.`);
+      else toast.error(`Swapped for this workout, but the plan wasn't updated: ${result.message}`);
+    } else {
+      toast(plan.mode === "add" ? `Added ${replacement.name} after ${original.name}` : `Swapped to ${replacement.name} for this workout`);
+    }
+    return true;
+  }
 
   function confirmSkip() {
     if (!skipping) return;
@@ -267,10 +326,13 @@ export function WorkoutTracker({ initial, serverUpdatedAt, previous: initialPrev
               timeZone={timeZone}
               dispatch={dispatch}
               onSkip={setSkippingId}
+              onSwap={setSwapId}
             />
           ))}
         </div>
       )}
+
+      <SwapExerciseDialog request={swapRequest} library={library} onConfirm={confirmSwap} onClose={() => setSwapId(null)} />
 
       <SkipExerciseDialog impact={impact} planName={planName} timeZone={timeZone} onConfirm={confirmSkip} onClose={() => setSkippingId(null)} />
 

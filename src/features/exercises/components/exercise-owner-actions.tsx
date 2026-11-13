@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ConfirmAction } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes";
+import { offline } from "@/lib/offline";
 
 import { deleteExercise, setExerciseArchived } from "../actions";
 
@@ -17,7 +18,7 @@ export function ExerciseOwnerActions({ exerciseId, name, isArchived }: { exercis
 
   function toggleArchived() {
     startTransition(async () => {
-      const result = await setExerciseArchived(exerciseId, !isArchived);
+      const result = await setExerciseArchived(exerciseId, !isArchived).catch(offline);
       if (result.ok) toast.success(result.message);
       else toast.error(result.message);
     });
@@ -26,7 +27,7 @@ export function ExerciseOwnerActions({ exerciseId, name, isArchived }: { exercis
   function remove() {
     startTransition(async () => {
       // Redirects to the library on success.
-      const result = await deleteExercise(exerciseId);
+      const result = await deleteExercise(exerciseId).catch(offline);
       if (!result.ok) toast.error(result.message);
     });
   }

@@ -290,3 +290,54 @@ export async function movePlanExercise(planExerciseId: string, offset: -1 | 1): 
   revalidatePlans();
   return { ok: true };
 }
+
+/** Checks a replacement can be used, and that the day doesn't already have it. */
+async function checkReplacement(supabase: Awaited<ReturnType<typeof createClient>>, dayId: string, exerciseId: string) {
+  const [exercise, existing] = await Promise.all([
+    supabase.from("exercises").select("id, name, is_archived").eq("id", exerciseId).maybeSingle(),
+    supabase.from("plan_exercises").select("id", { count: "exact", head: true }).eq("workout_day_id", dayId).eq("exercise_id", exerciseId),
+  ]);
+  if (exercise.error || existing.error) return { ok: false as const, message: "Could not swap the exercise. Try again." };
+  if (!exercise.data || exercise.data.is_archived) return { ok: false as const, message: "That exercise isn't available." };
+  if (existing.count) return { ok: false as const, message: `${exercise.data.name} is already in this day.` };
+  return { ok: true as const, name: exercise.data.name };
+}
+
+/**
+ * Replaces an exercise in a plan day, keeping its position, targets, rest and
+ * note. Finished workouts keep the exercise they were logged with.
+ */
+export async function swapPlanExercise(planExerciseId: string, exerciseId: string): Promise<ActionResult> {
+  if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED };
+  if (!isUuid(planExerciseId) || !isUuid(exerciseId)) return { ok: false, message: "Unknown exercise." };
+
+  const supabase = await createClient();
+  const { data: item, error: itemError } = await supabase.from("plan_exercises").select("id, workout_day_id").eq("id", planExerciseId).maybeSingle();
+  if (itemError || !item) return { ok: false, message: "This exercise is no longer in the plan." };
+  const check = await checkReplacement(supabase, item.workout_day_id, exerciseId);
+  if (!check.ok) return check;
+
+  const { data, error } = await supabase.from("plan_exercises").update({ exercise_id: exerciseId }).eq("id", planExerciseId).select("id");
+  if (error || !data.length) return { ok: false, message: "Could not swap the exercise. Try again." };
+
+  revalidatePlans();
+  return { ok: true, message: `Swapped to ${check.name}.` };
+}
+
+/** The same swap, made from a running workout: finds the exercise in the workout's plan day. */
+export async function swapPlanExerciseInDay(dayId: string, fromExerciseId: string, toExerciseId: string): Promise<ActionResult> {
+  if (!(await getCurrentUser())) return { ok: false, message: SESSION_EXPIRED };
+  if (!isUuid(dayId) || !isUuid(fromExerciseId) || !isUuid(toExerciseId)) return { ok: false, message: "Unknown exercise." };
+
+  const supabase = await createClient();
+  const { data: items, error } = await supabase
+    .from("plan_exercises")
+    .select("id")
+    .eq("workout_day_id", dayId)
+    .eq("exercise_id", fromExerciseId)
+    .order("position")
+    .limit(1);
+  if (error) return { ok: false, message: "Could not update the plan. Try again." };
+  if (!items.length) return { ok: false, message: "That exercise is no longer in your plan, so the plan wasn't changed." };
+  return swapPlanExercise(items[0].id, toExerciseId);
+}
