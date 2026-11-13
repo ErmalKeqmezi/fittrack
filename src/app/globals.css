@@ -142,6 +142,14 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    /*
+     * iPhone Home Screen app: with the status bar drawn over the page, iOS
+     * lays out a page that is too short to scroll as if the screen ended a
+     * status bar's height early, so the bottom navigation floats above the
+     * edge. Making the page that much taller gives it the full screen.
+     * The inset is 0 everywhere else, so nothing changes there.
+     */
+    min-height: calc(100% + env(safe-area-inset-top));
   }
   /* Grids without explicit columns get one shrinkable column, so long
      truncated rows can never push a stack wider than the screen.
