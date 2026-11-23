@@ -6,6 +6,8 @@ import { Panel, PanelHeader } from "@/components/panel";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { requireUser } from "@/features/auth/queries";
 import { ProfileForm } from "@/features/profile/components/profile-form";
+import { WorkoutReminderSettings } from "@/features/reminders/components/workout-reminder-settings";
+import { getReminderSettings } from "@/features/reminders/queries";
 import { RestAlertSettings } from "@/features/workouts/components/rest-alert-settings";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -18,6 +20,7 @@ function timeZoneOptions(current: string) {
 
 export default async function SettingsPage() {
   const user = await requireUser();
+  const reminder = await getReminderSettings(user.id);
   const memberSince = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeZone: user.timeZone }).format(
     new Date(user.memberSince),
   );
@@ -29,6 +32,11 @@ export default async function SettingsPage() {
       <Panel>
         <PanelHeader title="Profile" icon={UserRound} />
         <ProfileForm displayName={user.displayName} timeZone={user.timeZone} timeZones={timeZoneOptions(user.timeZone)} />
+      </Panel>
+
+      <Panel>
+        <PanelHeader title="Workout reminder" description="For your account, on every device you turn it on" />
+        <WorkoutReminderSettings initialEnabled={reminder.enabled} initialTime={reminder.time} />
       </Panel>
 
       <Panel>

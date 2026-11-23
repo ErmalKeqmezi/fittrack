@@ -277,5 +277,24 @@ check("anonymous visitors cannot read rest alerts", !!r.error || r.data.length =
 r = await owner.from("rest_alerts").delete().eq("endpoint", alert.endpoint).eq("ends_at", alert.ends_at).select();
 check("owner's alert is claimed by its exact end time", r.data?.length === 1, r.error?.message);
 
+// Reminder devices are private, and the reminder job needs its secret
+const device = { endpoint: "https://web.push.apple.com/device", p256dh: "key", auth: "secret" };
+r = await owner.from("push_subscriptions").insert(device);
+check("owner can register a device for reminders", !r.error, r.error?.message);
+r = await second.from("push_subscriptions").select("endpoint");
+check("second account cannot see the owner's devices", r.data?.length === 0);
+r = await second.from("push_subscriptions").insert({ ...device, user_id: uid });
+check("second account cannot register a device for the owner", !!r.error, r.error?.code);
+r = await anon.from("push_subscriptions").select("endpoint");
+check("anonymous visitors cannot read devices", !!r.error || r.data.length === 0);
+r = await anon.rpc("claim_workout_reminders", { p_secret: "wrong-secret-wrong-secret-wrong-secret" });
+check("the reminder job refuses a wrong secret", r.error?.code === "42501", r.error?.message);
+r = await owner.rpc("claim_workout_reminders", { p_secret: "wrong-secret-wrong-secret-wrong-secret" });
+check("signed-in users cannot run the reminder job", !!r.error, r.error?.code);
+r = await anon.rpc("set_job_secret", { p_name: "workout_reminders", p_secret: "x".repeat(40) });
+check("nobody can set the job secret through the API", !!r.error, r.error?.code);
+r = await owner.from("profiles").update({ workout_reminder_enabled: true, workout_reminder_time: "07:30" }).eq("id", uid).select("workout_reminder_time").single();
+check("owner can save their reminder time", r.data?.workout_reminder_time === "07:30:00", r.error?.message);
+
 console.log(fails ? `\n${fails} FAILED` : "\nALL PASSED");
 process.exit(fails ? 1 : 0);

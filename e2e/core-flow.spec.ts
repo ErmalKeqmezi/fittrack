@@ -347,6 +347,29 @@ test("rest alert preferences persist in settings", async () => {
   await page.getByRole("radio", { name: "Beeps" }).click();
 });
 
+test("the daily workout reminder can be turned on, timed and turned off", async () => {
+  await page.goto("/settings");
+  const toggle = page.getByLabel("Daily workout reminder");
+  await expect(toggle).not.toBeChecked();
+  await expect(page.getByLabel("Reminder time")).toHaveCount(0);
+
+  await toggle.check();
+  await expect(page.getByText("Reminder set for 18:00 every day.").first()).toBeVisible();
+  const time = page.getByLabel("Reminder time");
+  await time.fill("07:15");
+  await expect(page.getByText("Reminder set for 07:15 every day.").first()).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel("Daily workout reminder")).toBeChecked();
+  await expect(page.getByLabel("Reminder time")).toHaveValue("07:15");
+
+  await page.getByLabel("Daily workout reminder").uncheck();
+  await expect(page.getByText("Daily reminder turned off.").first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Daily workout reminder")).not.toBeChecked();
+  await expect(page.getByLabel("Reminder time")).toHaveCount(0);
+});
+
 test("shows sets per muscle group", async () => {
   await page.goto("/progress?range=30d");
   const panel = page.locator("section").filter({ has: page.getByRole("heading", { name: "Sets per muscle group" }) });

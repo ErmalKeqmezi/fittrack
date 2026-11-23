@@ -41,7 +41,7 @@ self.addEventListener("message", (event) => {
   }
 });
 
-// A rest ended while the app was in the background or the phone was locked.
+// A rest ended, or the daily workout reminder is due, while the app is closed.
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -52,8 +52,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title ?? "Rest over", {
       body: data.body ?? "Time for your next set",
-      tag: "fittrack-rest",
+      tag: data.tag ?? "fittrack-rest",
       icon: "/icons/icon-192.png",
+      data: { url: data.url ?? "/workout" },
     }),
   );
 });
@@ -64,7 +65,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const open = windows[0];
-      return open ? open.focus() : self.clients.openWindow("/workout");
+      return open ? open.focus() : self.clients.openWindow(event.notification.data?.url ?? "/workout");
     }),
   );
 });

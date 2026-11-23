@@ -17,7 +17,8 @@ function toKeyBytes(base64Url: string) {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-async function getSubscription(createIfMissing: boolean) {
+/** This device's push subscription, created if asked and allowed. Null where push isn't available. */
+export async function getSubscription(createIfMissing: boolean) {
   const key = env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   if (!key || !("serviceWorker" in navigator) || !("PushManager" in window)) return null;
   const registration = await navigator.serviceWorker.getRegistration();

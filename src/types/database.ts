@@ -195,17 +195,37 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"display_name": string | null,"id": string,"timezone": string,"updated_at": string,"weight_unit": string
+                    "created_at": string,"display_name": string | null,"id": string,"timezone": string,"updated_at": string,"weight_unit": string,"workout_reminder_enabled": boolean,"workout_reminder_last_sent": string | null,"workout_reminder_time": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"display_name"?: string | null,"id": string,"timezone"?: string,"updated_at"?: string,"weight_unit"?: string
+                    "created_at"?: string,"display_name"?: string | null,"id": string,"timezone"?: string,"updated_at"?: string,"weight_unit"?: string,"workout_reminder_enabled"?: boolean,"workout_reminder_last_sent"?: string | null,"workout_reminder_time"?: string
                   }
                   Update: {
-                    "created_at"?: string,"display_name"?: string | null,"id"?: string,"timezone"?: string,"updated_at"?: string,"weight_unit"?: string
+                    "created_at"?: string,"display_name"?: string | null,"id"?: string,"timezone"?: string,"updated_at"?: string,"weight_unit"?: string,"workout_reminder_enabled"?: boolean,"workout_reminder_last_sent"?: string | null,"workout_reminder_time"?: string
                   }
                   Relationships: [
                     
+                  ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"p256dh": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"p256dh": string,"user_id"?: string
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"p256dh"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_subscriptions_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"rest_alerts": {
                   Row: {
@@ -383,6 +403,11 @@ isOneToOne: false
 "add_workout_day":
 { Args: { "p_is_rest_day"?: boolean,"p_name": string,"p_plan_id": string,"p_weekday"?: number }; Returns: string
                            },
+"claim_workout_reminders":
+{ Args: { "p_secret": string }; Returns: {
+              "auth": string,"display_name": string,"endpoint": string,"p256dh": string,"user_id": string
+            }[]
+                           },
 "create_workout_plan":
 { Args: { "p_days"?: Json,"p_description"?: string,"p_name": string,"p_template_key"?: string }; Returns: string
                            },
@@ -417,6 +442,9 @@ isOneToOne: false
 "recompute_personal_records":
 { Args: { "p_exercise_ids": (string)[] }; Returns: undefined
                            },
+"remove_push_subscription":
+{ Args: { "p_endpoint": string,"p_secret": string }; Returns: undefined
+                           },
 "save_custom_exercise":
 { Args: { "p_category": string,"p_description": string,"p_equipment": string,"p_exercise_id"?: string,"p_name": string,"p_primary_muscle_group_id": number,"p_secondary_muscle_group_ids": (number)[] }; Returns: string
                            },
@@ -425,6 +453,9 @@ isOneToOne: false
                            },
 "set_active_plan":
 { Args: { "p_active": boolean,"p_plan_id": string }; Returns: undefined
+                           },
+"set_job_secret":
+{ Args: { "p_name": string,"p_secret": string }; Returns: undefined
                            },
 "start_workout_session":
 { Args: { "p_workout_day_id"?: string }; Returns: string

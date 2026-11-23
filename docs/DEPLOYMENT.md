@@ -44,6 +44,11 @@ Both have free tiers that are enough for one person. Allow about 20 minutes.
    | `NEXT_PUBLIC_SITE_URL` | `https://<your-domain>` (no trailing slash) |
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Optional, for rest notifications: from `npx web-push generate-vapid-keys` |
    | `VAPID_PRIVATE_KEY` | Optional, the private key from the same command. Keep it secret |
+   | `WORKOUT_REMINDER_SECRET` | Optional, for daily workout reminders: a long random value (`openssl rand -hex 32`). Mark it secret |
+
+   For daily reminders, also store the same value in the database once, in the Supabase SQL editor:
+   `select public.set_job_secret('workout_reminders', '<the same value>');`
+   The scheduled function `netlify/functions/workout-reminders.mts` then runs every 5 minutes.
 
 3. Deploy. Optionally add a custom domain, then update `NEXT_PUBLIC_SITE_URL` and the Supabase
    URL configuration to match, and redeploy.

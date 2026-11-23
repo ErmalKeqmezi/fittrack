@@ -158,6 +158,16 @@ profiles ─1:N─ personal_records (unique per exercise + record type) ─→ e
   totals, est. 1RM (labelled as an estimate) and a comparison with the previous time each exercise
   was trained. Workouts can be edited (sets, exercises, notes, start time, duration) or deleted.
 
+## Daily workout reminder
+
+Settings → Workout reminder: an on/off switch and a time. A Netlify scheduled function
+(`netlify/functions/workout-reminders.mts`) runs every 5 minutes and calls `claim_workout_reminders`, which picks
+users whose time has passed (by under 3 hours) in their own timezone, who haven't had today's reminder and haven't
+started a workout today. It marks them sent and returns their devices (`push_subscriptions`), and each gets
+"Hey {name}, don't forget to work out today". The job has no user session and FitTrack never uses the
+service-role key, so the function is protected by `WORKOUT_REMINDER_SECRET`, stored only as a hash in a schema the
+API can't reach. Devices the push service reports as gone are removed.
+
 ## Exercise swapping
 
 - **In a workout:** every exercise has a Swap button. The panel suggests alternatives from the library's own
