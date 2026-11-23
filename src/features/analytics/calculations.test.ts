@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  currentWeekDays,
   estimateOneRepMax,
   progressionHighlights,
   sessionDurationMinutes,
@@ -55,17 +54,6 @@ describe("weeklyBuckets", () => {
     const late = [{ startedAt: "2026-11-01T23:30:00Z", volumeKg: 100 }];
     expect(weeklyBuckets(late, "2026-11-02", "UTC", 2).map((b) => b.workouts)).toEqual([1, 0]);
     expect(weeklyBuckets(late, "2026-11-02", "Europe/Tirane", 2).map((b) => b.workouts)).toEqual([0, 1]);
-  });
-});
-
-describe("currentWeekDays", () => {
-  it("marks trained days, today and future days", () => {
-    const days = currentWeekDays([{ startedAt: "2026-11-03T18:00:00Z" }], "2026-11-04", "UTC");
-    expect(days).toHaveLength(7);
-    expect(days[0].date).toBe("2026-11-02");
-    expect(days[1].workouts).toBe(1);
-    expect(days[2].isToday).toBe(true);
-    expect(days[3].isFuture).toBe(true);
   });
 });
 

@@ -70,26 +70,6 @@ export function weeklyBuckets(
   return buckets;
 }
 
-export type WeekDay = { date: DateKey; workouts: number; isToday: boolean; isFuture: boolean };
-
-/** Monday–Sunday of the current week with the number of workouts on each day. */
-export function currentWeekDays(
-  sessions: Pick<SessionSummary, "startedAt">[],
-  today: DateKey,
-  timeZone: string,
-): WeekDay[] {
-  const monday = startOfWeek(today);
-  const counts = new Map<DateKey, number>();
-  for (const session of sessions) {
-    const key = toDateKey(session.startedAt, timeZone);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(monday, i);
-    return { date, workouts: counts.get(date) ?? 0, isToday: date === today, isFuture: date > today };
-  });
-}
-
 export type ExerciseSessionBest = {
   exerciseId: string;
   exerciseName: string;

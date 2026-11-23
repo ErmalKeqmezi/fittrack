@@ -1,11 +1,9 @@
 import "server-only";
 
 import {
-  currentWeekDays,
   progressionHighlights,
   sessionDurationMinutes,
   totalVolume,
-  weeklyBuckets,
   type ExerciseSessionBest,
   type SessionSummary,
 } from "@/features/analytics/calculations";
@@ -16,7 +14,6 @@ import { createClient } from "@/lib/supabase/server";
 
 import { resolveTodaySchedule, type ActivePlanInput } from "./today";
 
-const CHART_WEEKS = 12;
 const HIGHLIGHT_LOOKBACK_DAYS = 180;
 
 function fail(context: string, message: string): never {
@@ -156,8 +153,6 @@ export async function getDashboardData(user: CurrentUser) {
       achievedAt: r.achieved_at,
       exerciseName: r.exercises?.name ?? "Exercise",
     })),
-    weekDays: currentWeekDays(sessions, today, timeZone),
-    weeklyBuckets: weeklyBuckets(sessions, today, timeZone, CHART_WEEKS),
     recentWorkouts: sessions.slice(0, 6).map((s) => ({ ...s, durationMinutes: sessionDurationMinutes(s) })),
     highlights: progressionHighlights(bests, today, timeZone),
     todaySchedule: resolveTodaySchedule(plan, today, completedDayIds),
